@@ -13,4 +13,49 @@ function calc(){let sale=0,hours=0;const groups={};const group=(surface,color,sw
 function refreshAll(){const c=calc(),p=state.project;$('homeProjectLabel').textContent=p.customerName||p.address||'No project started';$('homePrice').textContent=money(c.sale);$('statusRooms').textContent=c.selected;$('statusGallons').textContent=c.gallons;$('statusDays').textContent=c.days;$('statusMargin').textContent=Math.round(c.margin*100)+'%';$('salePrice').textContent=money(c.sale);$('directCost').textContent=money(c.direct);$('grossProfit').textContent=money(c.profit);$('grossMargin').textContent=Math.round(c.margin*100)+'%';$('laborHours').textContent=c.hours.toFixed(1);$('jobDays').textContent=c.days;$('paintGallons').textContent=c.gallons;$('selectedCount').textContent=c.selected;$('materialSummary').innerHTML=c.groups.length?c.groups.map(g=>`<div class="material-row"><span>${g.surface}<br><small>${g.color}${g.sw?' • '+g.sw:''}</small></span><span>${g.product}<br><small>${Math.round(g.sf)} sq ft</small></span><strong>${g.buyGal} gal</strong></div>`).join(''):'<p class="muted">Select rooms to calculate materials.</p>'}
 [['applyWalls','wall'],['applyCeilings','ceiling'],['applyTrim','trim']].forEach(([id,k])=>{$(id).onclick=()=>{const color=$(k==='wall'?'defaultWallColor':k==='ceiling'?'defaultCeilingColor':'defaultTrimColor').value,sw=$(k==='wall'?'defaultWallSw':k==='ceiling'?'defaultCeilingSw':'defaultTrimSw').value;state.rooms.filter(r=>r.selected).forEach(r=>{r[k+'Color']=color;r[k+'Sw']=sw});save();renderColors()}});
 $('newProjectBtn').onclick=()=>{if(confirm('Start a new estimate? This clears the current project on this device.')){state=fresh();save();bindProject();renderRooms();renderColors()}};$('printProposal').onclick=()=>window.print();function renderProposal(){const c=calc(),p=state.project,rows=state.rooms.filter(r=>r.selected).map(r=>`<tr><td>${r.name}</td><td>${r.package}</td><td>${include(r,'ceiling')?'Yes':'No'}</td><td>${include(r,'trim')?'Yes':'No'}</td></tr>`).join('');$('proposalContent').innerHTML=`<h2>UrbanSkyLine Design & Build LLC</h2><p><strong>Interior Painting Proposal</strong></p><p><strong>Customer:</strong> ${p.customerName||'—'}<br><strong>Project:</strong> ${p.address||'—'} ${p.cityZip||''}<br><strong>Estimator:</strong> ${p.estimator||'—'}</p><h3>Scope</h3><table><thead><tr><th>Room</th><th>Package</th><th>Ceiling</th><th>Trim</th></tr></thead><tbody>${rows||'<tr><td colspan="4">No rooms selected</td></tr>'}</tbody></table><h3>Investment</h3><p style="font-size:28px;font-weight:800">${money(c.sale)}</p><p>Estimated duration: ${c.days} day${c.days===1?'':'s'} • Estimated paint purchase: ${c.gallons} gallon${c.gallons===1?'':'s'}</p><p><strong>Notes:</strong> ${p.notes||'Standard preparation and two finish coats unless otherwise specified.'}</p>`}
-let deferredPrompt;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;$('installBtn').hidden=false});$('installBtn').onclick=async()=>{if(deferredPrompt){deferredPrompt.prompt();deferredPrompt=null;$('installBtn').hidden=true}};if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js');bindProject();renderRooms();renderColors();refreshAll();
+let deferredPrompt;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;$('installBtn').hidden=false});$('installBtn').onclick=async()=>{if(deferredPrompt){deferredPrompt.prompt();deferredPrompt=null;$('installBtn').hidden=true}};
+const syncInput=$("syncUrl");
+if(syncInput) syncInput.value=USL_SYNC.url;
+
+$("testSync")?.addEventListener("click",async()=>{
+  try{
+    const u=($("syncUrl")?.value||USL_SYNC.url).trim();
+    if(!u) throw Error("Add the Apps Script Web App URL first.");
+    localStorage.setItem("uslSyncUrl",u);
+    USL_SYNC.url=u;
+    const r=await fetch(u,{method:"GET",cache:"no-store"});
+    const d=await r.json();
+    if(d.error) throw Error(d.error);
+    $("syncMessage").textContent=d.message||"Connected to UrbanSkyLine Google Sheet.";
+  }catch(e){
+    $("syncMessage").textContent="Test failed: "+e.message;
+  }
+});
+
+$("pullSheet")?.addEventListener("click",async()=>{
+  try{
+    const d=await uslApi("loadEstimate");
+    if(d.state){
+      state=d.state;
+      save();
+      bindProject();
+      renderRooms();
+      renderColors();
+      refreshAll();
+      $("syncMessage").textContent="Loaded current estimate from Google Sheet.";
+    }
+  }catch(e){
+    $("syncMessage").textContent="Load failed: "+e.message;
+  }
+});
+
+$("pushSheet")?.addEventListener("click",async()=>{
+  try{
+    await uslApi("saveEstimate",{state});
+    $("syncMessage").textContent="Saved current estimate to Google Sheet.";
+  }catch(e){
+    $("syncMessage").textContent="Save failed: "+e.message;
+  }
+});
+
+if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js');bindProject();renderRooms();renderColors();refreshAll();
