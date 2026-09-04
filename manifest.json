@@ -1,0 +1,9 @@
+{
+  "name": "UrbanSkyLine Paint Estimator",
+  "short_name": "USL Estimator",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f5f7f9",
+  "theme_color": "#173b5e",
+  "icons": []
+}
