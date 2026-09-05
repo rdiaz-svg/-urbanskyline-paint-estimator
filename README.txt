@@ -21,3 +21,14 @@ V6.2 — Crown-only pricing fix
 - Crown LF remains editable for actual field measurements.
 - Crown-only scope now produces labor, material, component market price, and final estimate instead of $0.
 - Existing V6.1 room/closet/repair/subcontractor logic remains unchanged.
+
+
+V6.4 — SUBCONTRACTOR PAGE FINALIZATION
+- Closet dimensions now appear directly in the subcontractor scope.
+- Reach-in closets show 6 ft W x 2 ft D x room height.
+- Walk-in closets show saved L x W x room height.
+- Closet baseboard LF appears when included.
+- Estimated payout remains visible even when an agreed payout is entered.
+- Actual painter-hours show a variance against estimated hours.
+- Payment status, amount paid, balance, date paid, crew notes and signature/date remain on the work order.
+- Print / Save Payout Sheet stays customer-price/profit free.
