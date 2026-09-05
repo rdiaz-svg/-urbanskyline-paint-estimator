@@ -46,6 +46,31 @@ function isApprovedProject(){return state.workflow?.mode==='project'&&!!state.wo
 function approvedChangeOrders(){return (state.workflow?.changeOrders||[]).filter(x=>x.status==='Approved')}
 function changeOrderNet(){return approvedChangeOrders().reduce((sum,x)=>sum+(x.type==='deduct'?-1:1)*Number(x.amount||0),0)}
 function currentContractTotal(){const base=Number(state.workflow?.approvedSnapshot?.totals?.sale||0);return base+changeOrderNet()}
+function currentProjectMetrics(){
+  const s=state.workflow?.approvedSnapshot,t=s?.totals||{},approved=approvedChangeOrders();
+  let hours=Math.max(0,Number(t.hours||0)),gallons=Math.max(0,Number(t.gallons||0));
+  const areas=new Set((s?.rooms||[]).filter(r=>r.selected&&scopeSummary(r)!=='None').map(r=>r.name));
+  approved.forEach(co=>{
+    const sign=co.type==='deduct'?-1:1;
+    hours+=sign*Math.max(0,Number(co.hours||0));
+    if(sign>0&&co.area)areas.add(co.area);
+    try{
+      let r=coRoomTemplate(co.area||'Custom Area');
+      r.length=Math.max(1,Number(co.length||r.length||10));
+      r.width=Math.max(1,Number(co.width||r.width||10));
+      r.height=Math.max(6,Number(co.height||r.height||9));
+      r.doorCount=Math.max(0,Math.round(Number(co.doorCount||0)));
+      r.windowCount=Math.max(0,Math.round(Number(co.windowCount||0)));
+      const scopes=Array.isArray(co.scopes)&&co.scopes.length?co.scopes:(co.scope==='Full Room'?['Full Room']:String(co.scope||'').split(' + ').map(x=>({'Walls':'Walls Only','Ceiling':'Ceiling Only','Baseboards':'Baseboards Only','Doors':'Doors Only','Windows':'Windows Only','Crown':'Crown Only'}[x]||x)).filter(Boolean));
+      r=applyCoScopes(r,scopes.length?scopes:['Full Room']);normalizeRoom(r);
+      const originalRooms=state.rooms;let cc;
+      try{state.rooms=[r];cc=calc();}finally{state.rooms=originalRooms}
+      gallons+=sign*Math.max(0,Number(cc?.gallons||0));
+    }catch(e){}
+  });
+  hours=Math.max(0,hours);gallons=Math.max(0,Math.round(gallons));
+  return {areas:areas.size,gallons,hours,painterDays:hours/8,currentContract:currentContractTotal(),status:state.workflow?.projectStatus||'Approved'};
+}
 function nav(v){
   if(isApprovedProject()&&['rooms','colors','estimate','materials'].includes(v)){
     alert('This estimate is approved and locked. Any scope or price change must be created as a Change Order.');
@@ -255,10 +280,26 @@ function refreshAll(){renderWorkflow();
   $('homePrice').textContent=isProject?money(currentContractTotal()):money(c.sale);
   if($('estimateWorkflowLabel'))$('estimateWorkflowLabel').textContent=isProject?'Approved Estimate Reference':'Estimate Workflow';
   if($('estimateReferenceBadge'))$('estimateReferenceBadge').hidden=!isProject;
-  $('statusRooms').textContent=isProject?(snap?.rooms||[]).filter(r=>r.selected&&scopeSummary(r)!=='None').length:c.selected;
-  $('statusGallons').textContent=isProject?(t.gallons||0):c.gallons;
-  $('statusDays').textContent=isProject?(t.calendarDays||Math.ceil(Number(t.painterDays||0))):c.days;
-  $('statusMargin').textContent=isProject?Math.round(Number(t.margin||0)*100)+'%':Math.round(c.margin*100)+'%';
+  if(isProject){
+    const pm=currentProjectMetrics();
+    if($('statusRoomsLabel'))$('statusRoomsLabel').textContent='Authorized areas';
+    if($('statusGallonsLabel'))$('statusGallonsLabel').textContent='Current paint gallons';
+    if($('statusDaysLabel'))$('statusDaysLabel').textContent='Current painter-days';
+    if($('statusMarginLabel'))$('statusMarginLabel').textContent='Current contract';
+    $('statusRooms').textContent=pm.areas;
+    $('statusGallons').textContent=pm.gallons;
+    $('statusDays').textContent=pm.painterDays.toFixed(2);
+    $('statusMargin').textContent=money(pm.currentContract);
+  }else{
+    if($('statusRoomsLabel'))$('statusRoomsLabel').textContent='Selected rooms';
+    if($('statusGallonsLabel'))$('statusGallonsLabel').textContent='Paint gallons';
+    if($('statusDaysLabel'))$('statusDaysLabel').textContent='Estimated days';
+    if($('statusMarginLabel'))$('statusMarginLabel').textContent='Gross margin';
+    $('statusRooms').textContent=c.selected;
+    $('statusGallons').textContent=c.gallons;
+    $('statusDays').textContent=c.days;
+    $('statusMargin').textContent=Math.round(c.margin*100)+'%';
+  }
   $('salePrice').textContent=money(c.sale);$('directCost').textContent=money(c.direct);$('grossProfit').textContent=money(c.profit);$('grossMargin').textContent=Math.round(c.margin*100)+'%';if($('standardInvestmentInternal'))$('standardInvestmentInternal').textContent=money(c.standardInvestment);if($('courtesyCreditInternal'))$('courtesyCreditInternal').textContent=c.courtesyCredit>0?'−'+money(c.courtesyCredit):'—';
   $('laborHours').textContent=c.hours.toFixed(1);$('jobDays').textContent=c.days;$('paintGallons').textContent=c.gallons;$('selectedCount').textContent=c.selected;
   $('materialSummary').innerHTML=(c.groups.length||c.primerGroups.length)?c.groups.map(g=>`<div class="material-row"><span>${g.surface}<br><small>${g.color}${g.sw?' • '+g.sw:''}</small></span><span>${g.product}<br><small>${Math.round(g.sf)} sq ft • 2 coats • ${g.coverage} sq ft/gal</small><br><small>${g.baseGal.toFixed(2)} gal coating + 10% waste = <strong>${g.calcGal.toFixed(2)} gal required</strong></small></span><strong>Buy ${g.buyGal} gal<br><small>${money2(g.unitCost)}/gal · ${money2(g.extCost)}</small></strong></div>`).join('')+c.primerGroups.map(g=>`<div class="material-row"><span>Primer<br><small>${g.spotRooms?'Spot Prime':'Full Prime'}</small></span><span>${g.product}<br><small>${g.spotRooms?g.spotRooms+' room spot-prime allowance':Math.round(g.sf)+' sq ft • 1 coat • 400 sq ft/gal'}</small>${g.spotRooms?'':`<br><small>${g.baseGal.toFixed(2)} gal coating + 10% waste = <strong>${g.calcGal.toFixed(2)} gal required</strong></small>`}</span><strong>Buy ${g.buyGal} gal<br><small>${money2(g.unitCost)}/gal · ${money2(g.extCost)}</small></strong></div>`).join('')+'<p class="muted material-note">Finish paint: 400 sq ft/gal; 2 coats; 10% waste. Full primer: 400 sq ft/gal; 1 coat; 10% waste. Primer is only included when selected.</p>':'<p class="muted">Select rooms to calculate materials.</p>';
@@ -608,7 +649,7 @@ bindProject();bindPhotoInputs();bindMaterialSettings();bindSubcontractor();rende
 
 // V6.8 — installed PWA update manager. Project/settings data remains in localStorage.
 (() => {
-  const CURRENT_VERSION = '6.9.12';
+  const CURRENT_VERSION = '6.9.13';
   const banner = () => document.getElementById('updateBanner');
   const compareVersions = (a,b) => {
     const aa=String(a).split('.').map(Number), bb=String(b).split('.').map(Number);
