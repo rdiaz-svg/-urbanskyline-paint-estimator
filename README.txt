@@ -14,3 +14,10 @@ Changes from V6.0:
 - Existing V6.0 subcontractor Work Order & Payout remains intact.
 
 Important: Google Sheet sync still uses the legacy field set and does not yet persist all V6.1 scope details.
+
+
+V6.2 — Crown-only pricing fix
+- Selecting Crown in Custom scope now defaults crown molding LF to the room perimeter: 2 × (Length + Width).
+- Crown LF remains editable for actual field measurements.
+- Crown-only scope now produces labor, material, component market price, and final estimate instead of $0.
+- Existing V6.1 room/closet/repair/subcontractor logic remains unchanged.
