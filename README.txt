@@ -39,7 +39,7 @@ V6.9.9: Project Mode now separates Original Approved Proposal from Current Contr
 
 V6.9.11: 40% is the standard UrbanSkyLine target margin. Estimates priced below 40% automatically show the customer-facing difference as a Courtesy Project Credit, while internal cost/margin data remains private. Includes V6.9.9 Current Contract Summary.
 
-V6.9.13 Project Mode Quick Status
+V6.9.14 Project Mode Quick Status
 - Project Mode Quick Status now uses original approved scope plus approved Change Orders.
 - Shows Authorized areas, Current paint gallons, Current painter-days, and Current contract.
 - Gross margin is removed from Project Mode Home status; Estimate Mode keeps its original estimate metrics.

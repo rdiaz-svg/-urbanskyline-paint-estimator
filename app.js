@@ -414,6 +414,15 @@ function coScopesLabel(scopes){
   if(scopes.includes('Full Room'))return 'Full Room';
   return scopes.map(coScopeLabel).join(' + ');
 }
+function coStoredScopes(co){
+  if(Array.isArray(co?.scopes)&&co.scopes.length)return co.scopes;
+  const raw=String(co?.scope||'').trim();
+  if(!raw)return [];
+  if(raw==='Full Room')return ['Full Room'];
+  const reverse={'Walls':'Walls Only','Ceiling':'Ceiling Only','Baseboards':'Baseboards Only','Doors':'Doors Only','Windows':'Windows Only','Crown':'Crown Only'};
+  return raw.split('+').map(x=>x.trim()).map(x=>reverse[x]||x).filter(Boolean);
+}
+function coHasScope(co,scope){const scopes=coStoredScopes(co);return scopes.includes('Full Room')||scopes.includes(scope);}
 function coDefaultDescription(){const area=$('coArea')?.value||'Area',scope=coScopesLabel(getCoScopes()),type=$('coType')?.value==='deduct'?'Remove':'Add';return `${type} ${area} — ${scope}`}
 let coDescriptionAuto=true;
 function updateCoGuidedUI(){
@@ -571,7 +580,7 @@ function renderSubcontractor(){
     const included=subcontractorIncludedItems(r),excluded=subcontractorExcludedItems(r),paint=subcontractorPaintLines(r);
     return `<div class="wo-room"><div class="wo-room-title"><h3>${r.name}</h3><span>${r.package||'Custom'}</span></div><div class="wo-columns"><div><h4>WORK INCLUDED</h4>${included.length?`<ul class="scope-checklist">${included.map(x=>`<li>${x}</li>`).join('')}</ul>`:'<p>None</p>'}</div><div><h4>NOT INCLUDED</h4>${excluded.length?`<ul class="scope-excluded">${excluded.map(x=>`<li>${x}</li>`).join('')}</ul>`:'<p>All standard room surfaces included.</p>'}</div></div>${paint.length?`<div class="wo-paint"><h4>PAINT / COLOR</h4>${paint.map(x=>`<div>${x}</div>`).join('')}</div>`:''}</div>`;
   }).join('');
-  const coSection=isProject?`<div class="wo-scope-heading"><h2>Approved Change Orders</h2><p>These approved changes are part of the current crew execution scope. Draft change orders are excluded.</p></div>${approvedCO.length?approvedCO.map(co=>`<div class="wo-room wo-change-order"><div class="wo-room-title"><h3>Change Order #${co.number}</h3><span>${co.type==='deduct'?'REMOVE':'ADD'}</span></div><p><strong>${co.description}</strong></p><ul class="scope-checklist"><li>Area: ${co.area||'Project'}</li><li>Scope: ${co.scope||coScopesLabel(co.scopes||[])}</li>${co.length?`<li>Dimensions: ${co.length} × ${co.width} × ${co.height} ft</li>`:''}${co.doorCount?`<li>Doors: ${co.doorCount}</li>`:''}${co.windowCount?`<li>Windows: ${co.windowCount}</li>`:''}<li>Painter-hours adjustment: ${co.type==='deduct'?'-':'+'}${Number(co.hours||0).toFixed(1)}</li></ul><small class="muted">Approved ${co.approvedAt?new Date(co.approvedAt).toLocaleString():'—'}</small></div>`).join(''):'<div class="panel"><p>No approved change orders.</p></div>'}`:'';
+  const coSection=isProject?`<div class="wo-scope-heading"><h2>Approved Change Orders</h2><p>These approved changes are part of the current crew execution scope. Draft change orders are excluded.</p></div>${approvedCO.length?approvedCO.map(co=>`<div class="wo-room wo-change-order"><div class="wo-room-title"><h3>Change Order #${co.number}</h3><span>${co.type==='deduct'?'REMOVE':'ADD'}</span></div><p><strong>${co.description}</strong></p><ul class="scope-checklist"><li>Area: ${co.area||'Project'}</li><li>Scope: ${co.scope||coScopesLabel(co.scopes||[])}</li>${co.length?`<li>Dimensions: ${co.length} × ${co.width} × ${co.height} ft</li>`:''}${coHasScope(co,'Doors Only')&&co.doorCount?`<li>Doors: ${co.doorCount}</li>`:''}${coHasScope(co,'Windows Only')&&co.windowCount?`<li>Windows: ${co.windowCount}</li>`:''}<li>Painter-hours adjustment: ${co.type==='deduct'?'-':'+'}${Number(co.hours||0).toFixed(1)}</li></ul><small class="muted">Approved ${co.approvedAt?new Date(co.approvedAt).toLocaleString():'—'}</small></div>`).join(''):'<div class="panel"><p>No approved change orders.</p></div>'}`:'';
   const warning=hasFieldEstimate?`<div class="field-estimate-warning"><strong>LARGE DRYWALL REPAIR — FIELD ESTIMATE REQUIRED</strong><br>This repair is outside the automatic payout calculation. Confirm scope and payout before work begins.</div>`:'';
   const hasAgreed=String(sc.agreedPayout||'').trim()!=='';
   const paidStatus=sc.paymentStatus||'Not Paid';
@@ -649,7 +658,7 @@ bindProject();bindPhotoInputs();bindMaterialSettings();bindSubcontractor();rende
 
 // V6.8 — installed PWA update manager. Project/settings data remains in localStorage.
 (() => {
-  const CURRENT_VERSION = '6.9.13';
+  const CURRENT_VERSION = '6.9.14';
   const banner = () => document.getElementById('updateBanner');
   const compareVersions = (a,b) => {
     const aa=String(a).split('.').map(Number), bb=String(b).split('.').map(Number);
