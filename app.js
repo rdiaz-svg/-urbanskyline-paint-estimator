@@ -330,20 +330,73 @@ function renderExecution(){
   if(controls){let extra=controls.querySelector('.co-execution-summary');if(!extra){extra=document.createElement('div');extra.className='co-execution-summary';const btn=controls.querySelector('#viewApprovedProposal');controls.insertBefore(extra,btn)}extra.innerHTML=`<div class="status-row"><span>Approved change orders</span><strong>${coNet>=0?'+':''}${money(coNet)}</strong></div><div class="status-row contract-current"><span>Current contract total</span><strong>${money(current)}</strong></div><button class="primary full" type="button" data-go="changeorders">Open Change Orders</button>`}
 }
 function nextChangeOrderNumber(){return (state.workflow?.changeOrders||[]).reduce((m,x)=>Math.max(m,Number(x.number||0)),0)+1}
-function readChangeOrderForm(){
-  const desc=String($('coDescription')?.value||'').trim(),type=$('coType')?.value||'add',amount=Math.max(0,Number($('coAmount')?.value||0)),directCost=Math.max(0,Number($('coDirectCost')?.value||0)),hours=Math.max(0,Number($('coHours')?.value||0));
-  if(!desc){alert('Enter the change-order scope or description.');return null}
-  if(!(amount>0)){alert('Enter the customer price for this change order.');return null}
-  return {description:desc,type,amount,directCost,hours};
+function coRoomTemplate(name){
+  const approved=(state.workflow?.approvedSnapshot?.rooms||[]).find(x=>x.name===name);
+  if(approved){const r=JSON.parse(JSON.stringify(approved));r.selected=true;return r;}
+  let r=(fresh().rooms||[]).find(x=>x.name===name);
+  if(!r){r=(fresh().rooms||[]).find(x=>x.name==='Custom Room 1');r.name=name||'Custom Area';r.price=900;}
+  r=JSON.parse(JSON.stringify(r));r.selected=true;return r;
 }
-function clearChangeOrderForm(){['coDescription','coAmount','coDirectCost','coHours'].forEach(id=>{if($(id))$(id).value=''});if($('coType'))$('coType').value='add'}
+function applyCoScope(r,scope){
+  setPackage(r,scope==='Full Room'?'Full Room':scope==='Walls Only'?'Walls Only':'Custom');
+  if(scope==='Ceiling Only')r.ceiling='Yes';
+  if(scope==='Baseboards Only')r.baseboards='Yes';
+  if(scope==='Doors Only')r.doors='Yes';
+  if(scope==='Windows Only')r.windows='Yes';
+  if(scope==='Crown Only'){r.crown='Yes';r.crownPresent=true;r.crownLf=2*(Math.max(0,+r.length||0)+Math.max(0,+r.width||0));}
+  return r;
+}
+function coDefaultDescription(){const area=$('coArea')?.value||'Area',scope=$('coScope')?.value||'Full Room',type=$('coType')?.value==='deduct'?'Remove':'Add';return `${type} ${area} — ${scope}`}
+function updateCoGuidedUI(){
+  const type=$('coType')?.value||'add',scope=$('coScope')?.value||'Full Room';
+  document.querySelectorAll('[data-co-type]').forEach(b=>b.classList.toggle('active',b.dataset.coType===type));
+  document.querySelectorAll('[data-co-scope]').forEach(b=>b.classList.toggle('active',b.dataset.coScope===scope));
+  document.querySelectorAll('[data-co-detail="doors"]').forEach(x=>x.hidden=scope!=='Doors Only'&&scope!=='Full Room');
+  document.querySelectorAll('[data-co-detail="windows"]').forEach(x=>x.hidden=scope!=='Windows Only'&&scope!=='Full Room');
+  if($('coPriceLabel'))$('coPriceLabel').textContent=type==='deduct'?'Customer Contract Deduction':'Customer Change Order';
+  const existing=(state.workflow?.approvedSnapshot?.rooms||[]).find(x=>x.name===$('coArea')?.value);
+  if($('coAreaHint'))$('coAreaHint').textContent=existing?'Using the dimensions saved in the approved estimate. You can adjust them below if this change applies to a different area.':'Using the standard room preset. Adjust measurements only if needed.';
+}
+function calculateChangeOrderAuto(updateDescription=false){
+  if(!$('coArea'))return null;
+  const area=$('coArea').value||'Living Room',scope=$('coScope')?.value||'Full Room';
+  let r=coRoomTemplate(area);
+  r.length=Math.max(1,Number($('coLength')?.value||r.length||10));r.width=Math.max(1,Number($('coWidth')?.value||r.width||10));r.height=Math.max(6,Number($('coHeight')?.value||r.height||9));r.doorCount=Math.max(0,Math.round(Number($('coDoorCount')?.value||0)));r.windowCount=Math.max(0,Math.round(Number($('coWindowCount')?.value||0)));
+  r=applyCoScope(r,scope);normalizeRoom(r);
+  const originalRooms=state.rooms;let c;
+  try{state.rooms=[r];c=calc();}finally{state.rooms=originalRooms}
+  const amount=Math.max(0,c?.sale||0),directCost=Math.max(0,c?.direct||0),hours=Math.max(0,c?.hours||0),margin=Math.max(0,c?.margin||0),sign=$('coType')?.value==='deduct'?-1:1;
+  if($('coAmount'))$('coAmount').textContent=(sign<0?'-':'+')+money(amount);if($('coDirectCost'))$('coDirectCost').textContent=money(directCost);if($('coHours'))$('coHours').textContent=hours.toFixed(1);if($('coMargin'))$('coMargin').textContent=Math.round(margin*100)+'%';if($('coMarginDisplay'))$('coMarginDisplay').value=Math.round(targetMargin()*100)+'%';if($('coNewContract'))$('coNewContract').textContent=money(currentContractTotal()+sign*amount);
+  if($('coPricingNote'))$('coPricingNote').textContent=`Automatic pricing: market reference ${money(c.marketSale)} · ${Math.round(c.targetMargin*100)}% margin floor ${money(c.marginFloor)} · minimum job ${money(c.minimumJob)}. Highest rule = ${money(c.sale)}.`;
+  if(updateDescription&&$('coDescription')&&!String($('coDescription').value||'').trim())$('coDescription').value=coDefaultDescription();
+  updateCoGuidedUI();
+  return {description:String($('coDescription')?.value||coDefaultDescription()).trim(),type:$('coType')?.value||'add',amount,directCost,hours,area,scope,length:r.length,width:r.width,height:r.height,doorCount:r.doorCount,windowCount:r.windowCount,margin};
+}
+function populateChangeOrderBuilder(){
+  const area=$('coArea');if(!area)return;
+  if(!area.options.length){
+    const approved=(state.workflow?.approvedSnapshot?.rooms||[]).filter(r=>r.selected);
+    if(approved.length){const g=document.createElement('optgroup');g.label='Approved project rooms';approved.forEach(r=>g.appendChild(new Option(r.name,r.name)));area.appendChild(g);}
+    const names=new Set(approved.map(r=>r.name));const g2=document.createElement('optgroup');g2.label='New area / room';ROOM_PRESETS.filter(x=>!names.has(x[0])).forEach(x=>g2.appendChild(new Option(x[0],x[0])));g2.appendChild(new Option('Custom Area','Custom Area'));area.appendChild(g2);
+  }
+  if(!$('coScope').value)$('coScope').value='Full Room';syncCoDimensions(true);calculateChangeOrderAuto(true);updateCoGuidedUI();
+}
+function syncCoDimensions(force=false){
+  const area=$('coArea');if(!area)return;const approved=(state.workflow?.approvedSnapshot?.rooms||[]).find(x=>x.name===area.value),preset=ROOM_PRESETS.find(x=>x[0]===area.value),base=approved|| (preset?{length:preset[1],width:preset[2],height:preset[3]}:null);
+  if(base){if(force||!$('coLength').value)$('coLength').value=base.length;if(force||!$('coWidth').value)$('coWidth').value=base.width;if(force||!$('coHeight').value)$('coHeight').value=base.height;if(force&&approved){$('coDoorCount').value=Math.max(0,Number(approved.doorCount||0));$('coWindowCount').value=Math.max(0,Number(approved.windowCount||0));}}
+  else if(force){$('coLength').value=10;$('coWidth').value=10;$('coHeight').value=9;$('coDoorCount').value=1;$('coWindowCount').value=1;}
+  calculateChangeOrderAuto(true);updateCoGuidedUI();
+}
+function readChangeOrderForm(){
+  const data=calculateChangeOrderAuto(false);if(!data)return null;
+  data.description=String($('coDescription')?.value||data.description).trim();if(!data.description){alert('Enter the change-order scope or description.');return null}if(!(data.amount>0)){alert('Select a scope that produces a calculated price.');return null}return data;
+}
+function clearChangeOrderForm(){if($('coType'))$('coType').value='add';if($('coScope'))$('coScope').value='Full Room';if($('coDoorCount'))$('coDoorCount').value=1;if($('coWindowCount'))$('coWindowCount').value=1;if($('coDescription'))$('coDescription').value='';if($('coArea'))$('coArea').selectedIndex=0;syncCoDimensions(true);updateCoGuidedUI()}
 function saveChangeOrder(status){
   if(!isApprovedProject()){alert('Change Orders are available only after an estimate is approved.');return}
   const data=readChangeOrderForm();if(!data)return;
   const num=nextChangeOrderNumber(),sign=data.type==='deduct'?-1:1;
-  if(status==='Approved'){
-    const ok=confirm(`Approve Change Order #${num}?\n\n${data.description}\n${data.type==='deduct'?'Deduct':'Add'}: ${money(data.amount)}\n\nThe original approved estimate will remain locked. The current contract total will change by ${sign<0?'-':'+'}${money(data.amount)}.`);if(!ok)return;
-  }
+  if(status==='Approved'){const ok=confirm(`Approve Change Order #${num}?\n\n${data.description}\n${data.type==='deduct'?'Deduct':'Add'}: ${money(data.amount)}\nEstimated direct cost: ${money(data.directCost)}\nPainter hours: ${data.hours.toFixed(1)}\n\nThe original approved estimate will remain locked. The current contract total will change by ${sign<0?'-':'+'}${money(data.amount)}.`);if(!ok)return;}
   const rec={id:'co_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),number:num,...data,status,createdAt:new Date().toISOString(),approvedAt:status==='Approved'?new Date().toISOString():''};
   state.workflow.changeOrders=state.workflow.changeOrders||[];state.workflow.changeOrders.push(rec);save();archiveCurrentProject();clearChangeOrderForm();renderChangeOrders();renderExecution();
 }
@@ -355,12 +408,11 @@ function approveExistingChangeOrder(id){
 function renderChangeOrders(){
   if(!isApprovedProject()){nav('home');return}
   const s=state.workflow.approvedSnapshot,t=s.totals||{},list=state.workflow.changeOrders||[],net=changeOrderNet(),current=currentContractTotal();
-  if($('coOriginalContract'))$('coOriginalContract').textContent=money(t.sale);
-  if($('coApprovedTotal'))$('coApprovedTotal').textContent=(net>=0?'+':'')+money(net);
-  if($('coCurrentContract'))$('coCurrentContract').textContent=money(current);
+  if($('coOriginalContract'))$('coOriginalContract').textContent=money(t.sale);if($('coApprovedTotal'))$('coApprovedTotal').textContent=(net>=0?'+':'')+money(net);if($('coCurrentContract'))$('coCurrentContract').textContent=money(current);
+  populateChangeOrderBuilder();
   const el=$('changeOrderList');if(el){
     if(!list.length)el.innerHTML='<p class="muted">No change orders yet. The original approved estimate remains unchanged.</p>';
-    else el.innerHTML=list.slice().reverse().map(co=>{const signed=co.type==='deduct'?-1:1;return `<div class="change-order-item"><div class="co-head"><div><strong>Change Order #${co.number}</strong><small>${new Date(co.createdAt).toLocaleString()}</small></div><span class="co-status ${co.status.toLowerCase()}">${co.status}</span></div><p>${co.description}</p><div class="status-row"><span>${co.type==='deduct'?'Contract deduction':'Contract addition'}</span><strong>${signed<0?'-':'+'}${money(co.amount)}</strong></div>${co.directCost?`<div class="status-row"><span>Estimated direct cost</span><strong>${money(co.directCost)}</strong></div>`:''}${co.hours?`<div class="status-row"><span>Additional painter hours</span><strong>${Number(co.hours).toFixed(1)}</strong></div>`:''}${co.status==='Draft'?`<button class="secondary full" type="button" data-approve-co="${co.id}">Approve Change Order</button>`:`<small class="muted">Approved ${co.approvedAt?new Date(co.approvedAt).toLocaleString():'—'} · Signature pending V7</small>`}</div>`}).join('');
+    else el.innerHTML=list.slice().reverse().map(co=>{const signed=co.type==='deduct'?-1:1;return `<div class="change-order-item"><div class="co-head"><div><strong>Change Order #${co.number}</strong><small>${new Date(co.createdAt).toLocaleString()}</small></div><span class="co-status ${co.status.toLowerCase()}">${co.status}</span></div><p>${co.description}</p>${co.area?`<small class="muted">${co.area} · ${co.scope||''}${co.length?` · ${co.length}×${co.width}×${co.height} ft`:''}</small>`:''}<div class="status-row"><span>${co.type==='deduct'?'Contract deduction':'Contract addition'}</span><strong>${signed<0?'-':'+'}${money(co.amount)}</strong></div>${co.directCost?`<div class="status-row"><span>Estimated direct cost</span><strong>${money(co.directCost)}</strong></div>`:''}${co.hours?`<div class="status-row"><span>Painter hours</span><strong>${Number(co.hours).toFixed(1)}</strong></div>`:''}${co.status==='Draft'?`<button class="secondary full" type="button" data-approve-co="${co.id}">Approve Change Order</button>`:`<small class="muted">Approved ${co.approvedAt?new Date(co.approvedAt).toLocaleString():'—'} · Signature pending V7</small>`}</div>`}).join('');
     el.querySelectorAll('[data-approve-co]').forEach(b=>b.onclick=()=>approveExistingChangeOrder(b.dataset.approveCo));
   }
 }
@@ -504,11 +556,12 @@ $("address")?.addEventListener("input",e=>{
   uslAddressTimer=setTimeout(()=>uslAddressSearch(e.target.value),350);
 });
 
+['coLength','coWidth','coHeight','coDoorCount','coWindowCount'].forEach(id=>$(id)?.addEventListener('input',()=>calculateChangeOrderAuto(false)));$('coArea')?.addEventListener('change',()=>syncCoDimensions(true));document.querySelectorAll('[data-co-type]').forEach(b=>b.addEventListener('click',()=>{if($('coType'))$('coType').value=b.dataset.coType;calculateChangeOrderAuto(true);updateCoGuidedUI()}));document.querySelectorAll('[data-co-scope]').forEach(b=>b.addEventListener('click',()=>{if($('coScope'))$('coScope').value=b.dataset.coScope;calculateChangeOrderAuto(true);updateCoGuidedUI()}));
 bindProject();bindPhotoInputs();bindMaterialSettings();bindSubcontractor();renderRooms();renderColors();refreshAll();renderWorkflow();if($('viewApprovedProposal'))$('viewApprovedProposal').onclick=viewApprovedProposal;
 
 // V6.8 — installed PWA update manager. Project/settings data remains in localStorage.
 (() => {
-  const CURRENT_VERSION = '6.9.3';
+  const CURRENT_VERSION = '6.9.5';
   const banner = () => document.getElementById('updateBanner');
   const compareVersions = (a,b) => {
     const aa=String(a).split('.').map(Number), bb=String(b).split('.').map(Number);

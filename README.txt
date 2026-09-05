@@ -1,3 +1,5 @@
+V6.9.6 — Automatic Change Order Pricing
+
 UrbanSkyLine Paint Estimator V6.9 — Estimate Mode / Project Mode Foundation
 
 Adds:
@@ -28,3 +30,5 @@ V6.9.4 — Mandatory Change Orders
 - Approved change orders update Current Contract Total while preserving Original Approved Contract.
 - Change order records are stored with local Project History state.
 - Customer signatures will be added in the signature release.
+
+V6.9.6: Guided touch-first Change Order workflow (What changed → Where → What work → Details → Review), automatic estimator pricing, existing approved room dimensions reused, internal cost details collapsed by default.
