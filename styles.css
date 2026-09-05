@@ -24,3 +24,7 @@
   body.print-subcontractor .wo-room{break-inside:avoid}
   body.print-subcontractor .field-estimate-warning{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 }
+/* V6.1 Rooms UX: collapsed repairs + automatic bedroom closets */
+.closet-types-three{grid-template-columns:repeat(3,1fr)}
+.repair-collapsed{margin-top:14px}.repair-toggle{width:100%;min-height:58px;border:1px solid #dfccb0;border-radius:14px;background:#fffaf3;padding:11px 13px;display:grid;grid-template-columns:1fr auto;gap:2px 12px;text-align:left;align-items:center;color:#5a3c1f}.repair-toggle span{font-weight:900}.repair-toggle small{grid-column:1/2;color:#806b56;line-height:1.3}.repair-toggle strong{grid-column:2;grid-row:1/3;color:#8b5d26}.repair-collapsed.has-repairs .repair-toggle{background:#f8f0e1;border-color:#c7a46d}.repair-collapsed .repair-box{margin-top:8px}
+@media(max-width:640px){.closet-types-three{grid-template-columns:1fr}.repair-toggle{grid-template-columns:1fr auto}.repair-toggle small{max-width:70vw}}

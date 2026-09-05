@@ -1,17 +1,16 @@
-UrbanSkyLine Paint Estimator — V6.0
+UrbanSkyLine Paint Estimator V6.1 — Rooms UX + Automatic Bedroom Closets
 
-Section 6: Subcontractor Work Order & Payout
+Changes from V6.0:
+- Repairs & Extras is collapsed by default.
+- Room cards show only “+ Add Repairs / Extras” until needed.
+- Once repairs are selected, a compact repair summary remains visible.
+- Full Room automatically includes closets for bedroom presets.
+- Master Bedroom default: Walk-in closet, 6 ft x 8 ft, room height.
+- Bedroom 1–4 default: Reach-in closet, 6 ft wide x 2 ft deep, room height.
+- Closet Full Room default scope: walls + ceiling + baseboards.
+- “No Closet” option is available when a bedroom does not have a closet.
+- Walls Only excludes the closet.
+- Custom keeps manual surface/closet control.
+- Existing V6.0 subcontractor Work Order & Payout remains intact.
 
-Added:
-- Dedicated internal subcontractor work-order page
-- Clear room-by-room scope with INCLUDED and NOT INCLUDED surfaces
-- Walls, ceilings, baseboards, doors, door sides/casing, windows, closets, crown, primer, repairs and extras
-- Paint product, color and sheen guidance by room
-- Estimated painter-hours, painter-days and payout
-- Editable subcontractor name, start date, agreed payout, actual hours, payment status, amount paid, date paid and crew notes
-- Balance tracking
-- Large-drywall-repair field-estimate warning
-- Print / Save Payout Sheet
-- Customer sale price, material cost, profit and margin remain hidden
-
-Important: newer V5/V6 fields are still local-device state until the Apps Script / Google Sheet sync is upgraded.
+Important: Google Sheet sync still uses the legacy field set and does not yet persist all V6.1 scope details.
