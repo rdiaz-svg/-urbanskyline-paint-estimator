@@ -32,3 +32,5 @@ V6.9.4 — Mandatory Change Orders
 - Customer signatures will be added in the signature release.
 
 V6.9.6: Guided touch-first Change Order workflow (What changed → Where → What work → Details → Review), automatic estimator pricing, existing approved room dimensions reused, internal cost details collapsed by default.
+
+V6.9.8: Change Orders support multi-select scope (e.g., Walls + Ceiling + Baseboards) with combined automatic pricing. Full Room remains a one-tap shortcut.

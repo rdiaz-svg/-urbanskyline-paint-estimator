@@ -337,34 +337,51 @@ function coRoomTemplate(name){
   if(!r){r=(fresh().rooms||[]).find(x=>x.name==='Custom Room 1');r.name=name||'Custom Area';r.price=900;}
   r=JSON.parse(JSON.stringify(r));r.selected=true;return r;
 }
-function applyCoScope(r,scope){
-  setPackage(r,scope==='Full Room'?'Full Room':scope==='Walls Only'?'Walls Only':'Custom');
-  if(scope==='Ceiling Only')r.ceiling='Yes';
-  if(scope==='Baseboards Only')r.baseboards='Yes';
-  if(scope==='Doors Only')r.doors='Yes';
-  if(scope==='Windows Only')r.windows='Yes';
-  if(scope==='Crown Only'){r.crown='Yes';r.crownPresent=true;r.crownLf=2*(Math.max(0,+r.length||0)+Math.max(0,+r.width||0));}
+function getCoScopes(){
+  const raw=String($('coScope')?.value||'Full Room');
+  const scopes=raw.split('|').filter(Boolean);
+  return scopes.length?scopes:['Full Room'];
+}
+function setCoScopes(scopes){
+  const clean=[...new Set((scopes||[]).filter(Boolean))];
+  if($('coScope'))$('coScope').value=(clean.length?clean:['Full Room']).join('|');
+}
+function applyCoScopes(r,scopes){
+  scopes=scopes&&scopes.length?scopes:['Full Room'];
+  if(scopes.includes('Full Room')){setPackage(r,'Full Room');return r;}
+  setPackage(r,'Custom');
+  if(scopes.includes('Walls Only'))r.walls='Yes';
+  if(scopes.includes('Ceiling Only'))r.ceiling='Yes';
+  if(scopes.includes('Baseboards Only'))r.baseboards='Yes';
+  if(scopes.includes('Doors Only'))r.doors='Yes';
+  if(scopes.includes('Windows Only'))r.windows='Yes';
+  if(scopes.includes('Crown Only')){r.crown='Yes';r.crownPresent=true;r.crownLf=2*(Math.max(0,+r.length||0)+Math.max(0,+r.width||0));}
   return r;
 }
 function coScopeLabel(scope){return {'Full Room':'Full Room','Walls Only':'Walls','Ceiling Only':'Ceiling','Baseboards Only':'Baseboards','Doors Only':'Doors','Windows Only':'Windows','Crown Only':'Crown'}[scope]||scope||'Full Room'}
-function coDefaultDescription(){const area=$('coArea')?.value||'Area',scope=coScopeLabel($('coScope')?.value||'Full Room'),type=$('coType')?.value==='deduct'?'Remove':'Add';return `${type} ${area} — ${scope}`}
+function coScopesLabel(scopes){
+  scopes=scopes&&scopes.length?scopes:['Full Room'];
+  if(scopes.includes('Full Room'))return 'Full Room';
+  return scopes.map(coScopeLabel).join(' + ');
+}
+function coDefaultDescription(){const area=$('coArea')?.value||'Area',scope=coScopesLabel(getCoScopes()),type=$('coType')?.value==='deduct'?'Remove':'Add';return `${type} ${area} — ${scope}`}
 let coDescriptionAuto=true;
 function updateCoGuidedUI(){
-  const type=$('coType')?.value||'add',scope=$('coScope')?.value||'Full Room';
+  const type=$('coType')?.value||'add',scopes=getCoScopes();
   document.querySelectorAll('[data-co-type]').forEach(b=>b.classList.toggle('active',b.dataset.coType===type));
-  document.querySelectorAll('[data-co-scope]').forEach(b=>b.classList.toggle('active',b.dataset.coScope===scope));
-  document.querySelectorAll('[data-co-detail="doors"]').forEach(x=>x.hidden=scope!=='Doors Only'&&scope!=='Full Room');
-  document.querySelectorAll('[data-co-detail="windows"]').forEach(x=>x.hidden=scope!=='Windows Only'&&scope!=='Full Room');
+  document.querySelectorAll('[data-co-scope]').forEach(b=>b.classList.toggle('active',scopes.includes(b.dataset.coScope)));
+  document.querySelectorAll('[data-co-detail="doors"]').forEach(x=>x.hidden=!scopes.includes('Doors Only')&&!scopes.includes('Full Room'));
+  document.querySelectorAll('[data-co-detail="windows"]').forEach(x=>x.hidden=!scopes.includes('Windows Only')&&!scopes.includes('Full Room'));
   if($('coPriceLabel'))$('coPriceLabel').textContent=type==='deduct'?'Customer Contract Deduction':'Customer Change Order';
   const existing=(state.workflow?.approvedSnapshot?.rooms||[]).find(x=>x.name===$('coArea')?.value);
   if($('coAreaHint'))$('coAreaHint').textContent=existing?'Using the dimensions saved in the approved estimate. You can adjust them below if this change applies to a different area.':'Using the standard room preset. Adjust measurements only if needed.';
 }
 function calculateChangeOrderAuto(updateDescription=false){
   if(!$('coArea'))return null;
-  const area=$('coArea').value||'Living Room',scope=$('coScope')?.value||'Full Room';
+  const area=$('coArea').value||'Living Room',scopes=getCoScopes();
   let r=coRoomTemplate(area);
   r.length=Math.max(1,Number($('coLength')?.value||r.length||10));r.width=Math.max(1,Number($('coWidth')?.value||r.width||10));r.height=Math.max(6,Number($('coHeight')?.value||r.height||9));r.doorCount=Math.max(0,Math.round(Number($('coDoorCount')?.value||0)));r.windowCount=Math.max(0,Math.round(Number($('coWindowCount')?.value||0)));
-  r=applyCoScope(r,scope);normalizeRoom(r);
+  r=applyCoScopes(r,scopes);normalizeRoom(r);
   const originalRooms=state.rooms;let c;
   try{state.rooms=[r];c=calc();}finally{state.rooms=originalRooms}
   const amount=Math.max(0,c?.sale||0),directCost=Math.max(0,c?.direct||0),hours=Math.max(0,c?.hours||0),margin=Math.max(0,c?.margin||0),sign=$('coType')?.value==='deduct'?-1:1;
@@ -372,7 +389,7 @@ function calculateChangeOrderAuto(updateDescription=false){
   if($('coPricingNote'))$('coPricingNote').textContent=`Automatic pricing: market reference ${money(c.marketSale)} · ${Math.round(c.targetMargin*100)}% margin floor ${money(c.marginFloor)} · minimum job ${money(c.minimumJob)}. Highest rule = ${money(c.sale)}.`;
   if(updateDescription&&$('coDescription')&&coDescriptionAuto)$('coDescription').value=coDefaultDescription();
   updateCoGuidedUI();
-  return {description:String($('coDescription')?.value||coDefaultDescription()).trim(),type:$('coType')?.value||'add',amount,directCost,hours,area,scope,length:r.length,width:r.width,height:r.height,doorCount:r.doorCount,windowCount:r.windowCount,margin};
+  return {description:String($('coDescription')?.value||coDefaultDescription()).trim(),type:$('coType')?.value||'add',amount,directCost,hours,area,scope:coScopesLabel(scopes),scopes:[...scopes],length:r.length,width:r.width,height:r.height,doorCount:r.doorCount,windowCount:r.windowCount,margin};
 }
 function populateChangeOrderBuilder(){
   const area=$('coArea');if(!area)return;
@@ -381,7 +398,7 @@ function populateChangeOrderBuilder(){
     if(approved.length){const g=document.createElement('optgroup');g.label='Approved project rooms';approved.forEach(r=>g.appendChild(new Option(r.name,r.name)));area.appendChild(g);}
     const names=new Set(approved.map(r=>r.name));const g2=document.createElement('optgroup');g2.label='New area / room';ROOM_PRESETS.filter(x=>!names.has(x[0])).forEach(x=>g2.appendChild(new Option(x[0],x[0])));g2.appendChild(new Option('Custom Area','Custom Area'));area.appendChild(g2);
   }
-  if(!$('coScope').value)$('coScope').value='Full Room';syncCoDimensions(true);calculateChangeOrderAuto(true);updateCoGuidedUI();
+  if(!$('coScope').value)setCoScopes(['Full Room']);syncCoDimensions(true);calculateChangeOrderAuto(true);updateCoGuidedUI();
 }
 function syncCoDimensions(force=false){
   const area=$('coArea');if(!area)return;const approved=(state.workflow?.approvedSnapshot?.rooms||[]).find(x=>x.name===area.value),preset=ROOM_PRESETS.find(x=>x[0]===area.value),base=approved|| (preset?{length:preset[1],width:preset[2],height:preset[3]}:null);
@@ -393,7 +410,7 @@ function readChangeOrderForm(){
   const data=calculateChangeOrderAuto(false);if(!data)return null;
   data.description=String($('coDescription')?.value||data.description).trim();if(!data.description){alert('Enter the change-order scope or description.');return null}if(!(data.amount>0)){alert('Select a scope that produces a calculated price.');return null}return data;
 }
-function clearChangeOrderForm(){coDescriptionAuto=true;if($('coType'))$('coType').value='add';if($('coScope'))$('coScope').value='Full Room';if($('coDoorCount'))$('coDoorCount').value=1;if($('coWindowCount'))$('coWindowCount').value=1;if($('coDescription'))$('coDescription').value='';if($('coArea'))$('coArea').selectedIndex=0;syncCoDimensions(true);updateCoGuidedUI()}
+function clearChangeOrderForm(){coDescriptionAuto=true;if($('coType'))$('coType').value='add';setCoScopes(['Full Room']);if($('coDoorCount'))$('coDoorCount').value=1;if($('coWindowCount'))$('coWindowCount').value=1;if($('coDescription'))$('coDescription').value='';if($('coArea'))$('coArea').selectedIndex=0;syncCoDimensions(true);updateCoGuidedUI()}
 function saveChangeOrder(status){
   if(!isApprovedProject()){alert('Change Orders are available only after an estimate is approved.');return}
   const data=readChangeOrderForm();if(!data)return;
@@ -558,7 +575,7 @@ $("address")?.addEventListener("input",e=>{
   uslAddressTimer=setTimeout(()=>uslAddressSearch(e.target.value),350);
 });
 
-$('coDescription')?.addEventListener('input',()=>{coDescriptionAuto=!String($('coDescription')?.value||'').trim();});['coLength','coWidth','coHeight','coDoorCount','coWindowCount'].forEach(id=>$(id)?.addEventListener('input',()=>calculateChangeOrderAuto(false)));$('coArea')?.addEventListener('change',()=>syncCoDimensions(true));document.querySelectorAll('[data-co-type]').forEach(b=>b.addEventListener('click',()=>{if($('coType'))$('coType').value=b.dataset.coType;calculateChangeOrderAuto(true);updateCoGuidedUI()}));document.querySelectorAll('[data-co-scope]').forEach(b=>b.addEventListener('click',()=>{if($('coScope'))$('coScope').value=b.dataset.coScope;calculateChangeOrderAuto(true);updateCoGuidedUI()}));
+$('coDescription')?.addEventListener('input',()=>{coDescriptionAuto=!String($('coDescription')?.value||'').trim();});['coLength','coWidth','coHeight','coDoorCount','coWindowCount'].forEach(id=>$(id)?.addEventListener('input',()=>calculateChangeOrderAuto(false)));$('coArea')?.addEventListener('change',()=>syncCoDimensions(true));document.querySelectorAll('[data-co-type]').forEach(b=>b.addEventListener('click',()=>{if($('coType'))$('coType').value=b.dataset.coType;calculateChangeOrderAuto(true);updateCoGuidedUI()}));document.querySelectorAll('[data-co-scope]').forEach(b=>b.addEventListener('click',()=>{const chosen=b.dataset.coScope;let scopes=getCoScopes();if(chosen==='Full Room'){scopes=['Full Room'];}else{scopes=scopes.filter(x=>x!=='Full Room');if(scopes.includes(chosen))scopes=scopes.filter(x=>x!==chosen);else scopes.push(chosen);if(!scopes.length)scopes=[chosen];}setCoScopes(scopes);calculateChangeOrderAuto(true);updateCoGuidedUI()}));
 bindProject();bindPhotoInputs();bindMaterialSettings();bindSubcontractor();renderRooms();renderColors();refreshAll();renderWorkflow();if($('viewApprovedProposal'))$('viewApprovedProposal').onclick=viewApprovedProposal;
 
 // V6.8 — installed PWA update manager. Project/settings data remains in localStorage.
