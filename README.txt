@@ -1,24 +1,15 @@
-UrbanSkyLine Paint Estimator — iPad PWA v1
+UrbanSkyLine Paint Estimator — v3 Section 2.2
 
-Built for iPad-first use.
+Fixes:
+- Removes the old Custom = 75% room-price shortcut.
+- Prices actual selected components using each room's existing Dallas full-room target as the calibration basis.
+- 10% of the room target is setup/cleanup; 90% is allocated by production hours across walls, ceiling, baseboards, doors, and windows.
+- Closet walls and crown molding use the same room-implied production rate as extras.
+- Project price is the highest of component market price, 40% gross-margin floor, or $250 minimum job charge, rounded up to nearest $5.
+- Proposal now shows customer-readable quantities such as “1 interior door” instead of “0 SF”.
+- Technical trim-equivalent SF remains internal only.
 
-Includes:
-- Customer/project details
-- 16 room presets including Garage
-- Room dimensions and scope
-- Full Room / Walls Only / Custom packages
-- Quick Apply wall, ceiling, and trim colors
-- Materials grouped by color
-- 2 coats, 350 sq ft/gal, 5% material waste
-- Dallas-area room pricing targets
-- Labor hours, job days, direct cost, gross profit and margin
-- Customer proposal with Print / Save PDF
-- Local device saving and offline support
-
-Important: This v1 is a working standalone app. It does not yet sync back to the existing Google Sheet. A v2 can connect through a Google Apps Script web endpoint.
-
-To use on iPad:
-1. Upload these files to a simple static web host such as GitHub Pages, Netlify, or Cloudflare Pages.
-2. Open the deployed website in Safari.
-3. Tap Share > Add to Home Screen.
-4. Launch it from the Home Screen like an app.
+Current cost assumptions retained from v2/v3 for now:
+- $48 per paint gallon
+- $28 labor cost per estimated hour
+These should be replaced with final supplier and subcontractor cost data in the pricing section.
