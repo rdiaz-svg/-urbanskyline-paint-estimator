@@ -1,3 +1,5 @@
+UrbanSkyLine Paint Estimator — Section 3.4
+
 UrbanSkyLine Paint Estimator — Section 3.2 Material Audit Fix
 
 Changes:
@@ -10,3 +12,5 @@ Changes:
 - Existing production rates and 15% project-level setup/cleanup remain unchanged.
 
 Note: $48/gallon remains a temporary material-cost assumption until the product-cost section is finalized.
+
+Build 3.4 cache-fix: app.js/styles.css asset keys bumped to v41 so browsers cannot reuse the prior 5% material logic.
