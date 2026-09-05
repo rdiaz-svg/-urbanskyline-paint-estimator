@@ -11,7 +11,7 @@ function isBedroomPreset(name){return name==='Master Bedroom'||/^Bedroom [1-4]$/
 function defaultClosetType(name){return name==='Master Bedroom'?'Walk-in':isBedroomPreset(name)?'Reach-in':'None'}
 function applyDefaultCloset(r){if(!isBedroomPreset(r.name))return;r.closets='Yes';r.closetType=defaultClosetType(r.name);r.closetLength=r.name==='Master Bedroom'?6:(r.closetLength||6);r.closetWidth=r.name==='Master Bedroom'?8:(r.closetWidth||6);r.closetWalls=true;r.closetCeiling=true;r.closetBaseboards=true;if(!r.closetOverride)r.closetOverride='auto'}
 const fresh=()=>({pricing:{targetMargin:0.40},materialSettings:{wallProduct:"ProMar 200 Zero VOC Interior Latex",wallCost:43.30,ceilingProduct:"Premium Ceiling Paint",ceilingCost:37.45,trimProduct:"Emerald Urethane Trim Enamel",trimCost:75.01,primerProduct:"ProBlock Premium All-Purpose Water-Based Interior/Exterior Primer",primerCost:27.95,suppliesPct:0},project:{customerName:"",phone:"",email:"",address:"",cityZip:"",estimator:"Roberto Diaz",projectType:"Interior Painting",wallCondition:"Good",notes:"",photoProjectId:"p_"+Date.now()+"_"+Math.random().toString(36).slice(2,8)},subcontractor:{name:"",startDate:"",paymentStatus:"Not Paid",datePaid:"",actualHours:"",agreedPayout:"",amountPaid:"",notes:""},rooms:ROOM_PRESETS.map(r=>({name:r[0],length:r[1],width:r[2],height:r[3],price:r[4],selected:false,package:"Full Room",walls:"Auto",ceiling:"Auto",trim:"Auto",baseboards:"Auto",doors:"Auto",windows:"Auto",closets:isBedroomPreset(r[0])?"Yes":"No",crown:"Auto",crownPresent:true,doorCount:1,doorSides:"Both Sides",doorCasing:false,windowCount:1,closetWallSf:0,closetType:defaultClosetType(r[0]),closetOverride:isBedroomPreset(r[0])?"auto":"none",closetLength:6,closetWidth:r[0]==="Master Bedroom"?8:6,closetWalls:true,closetCeiling:true,closetBaseboards:true,crownLf:0,wallColor:"Main Wall Color",wallSw:"",ceilingColor:"Ceiling White",ceilingSw:"",trimColor:"Trim White",trimSw:"",primerMode:"None",primerTarget:"Walls",repairs:{smallHole:0,mediumPatch:0,largeRepair:0,crackPatch:0,textureRepair:0,extensiveCaulk:0,stainPrep:0,wallpaperRemoval:0,customQty:0,customDescription:"Custom Extra",customHours:0,customMaterials:0}}))});
-let state;try{state=JSON.parse(localStorage.getItem("uslPaintApp"))||fresh()}catch(e){state=fresh()}if(!state.pricing)state.pricing={targetMargin:0.40};if(!(state.pricing.targetMargin>=0.20&&state.pricing.targetMargin<0.90))state.pricing.targetMargin=0.40;if(!state.subcontractor)state.subcontractor={name:"",startDate:"",paymentStatus:"Not Paid",datePaid:"",actualHours:"",agreedPayout:"",amountPaid:"",notes:""};if(!state.project.photoProjectId){state.project.photoProjectId="p_"+Date.now()+"_"+Math.random().toString(36).slice(2,8);localStorage.setItem("uslPaintApp",JSON.stringify(state));}const $=id=>document.getElementById(id),money=n=>new Intl.NumberFormat("en-US",{style:"currency",currency:"USD",maximumFractionDigits:0}).format(n||0),money2=n=>new Intl.NumberFormat("en-US",{style:"currency",currency:"USD",minimumFractionDigits:2,maximumFractionDigits:2}).format(n||0),esc=s=>String(s||"").replaceAll('"','&quot;');function save(){localStorage.setItem("uslPaintApp",JSON.stringify(state));refreshAll()}function nav(v){document.querySelectorAll('.view').forEach(x=>x.classList.toggle('active',x.dataset.view===v));window.scrollTo(0,0);if(v==='proposal')renderProposal();if(v==='subcontractor')renderSubcontractor()}document.addEventListener('click',e=>{const b=e.target.closest('[data-go]');if(b)nav(b.dataset.go)});
+let state;try{state=JSON.parse(localStorage.getItem("uslPaintApp"))||fresh()}catch(e){state=fresh()}if(!state.pricing)state.pricing={targetMargin:0.40};if(!(state.pricing.targetMargin>=0.20&&state.pricing.targetMargin<0.90))state.pricing.targetMargin=0.40;if(!state.subcontractor)state.subcontractor={name:"",startDate:"",paymentStatus:"Not Paid",datePaid:"",actualHours:"",agreedPayout:"",amountPaid:"",notes:""};if(!state.workflow)state.workflow={mode:"estimate",estimateStatus:"Draft",projectStatus:"Not Started",approvedAt:"",approvedSnapshot:null};if(!state.project.photoProjectId){state.project.photoProjectId="p_"+Date.now()+"_"+Math.random().toString(36).slice(2,8);localStorage.setItem("uslPaintApp",JSON.stringify(state));}const $=id=>document.getElementById(id),money=n=>new Intl.NumberFormat("en-US",{style:"currency",currency:"USD",maximumFractionDigits:0}).format(n||0),money2=n=>new Intl.NumberFormat("en-US",{style:"currency",currency:"USD",minimumFractionDigits:2,maximumFractionDigits:2}).format(n||0),esc=s=>String(s||"").replaceAll('"','&quot;');function save(){localStorage.setItem("uslPaintApp",JSON.stringify(state));refreshAll()}function nav(v){document.querySelectorAll('.view').forEach(x=>x.classList.toggle('active',x.dataset.view===v));window.scrollTo(0,0);if(v==='proposal')renderProposal();if(v==='subcontractor')renderSubcontractor();if(v==='execution')renderExecution()}document.addEventListener('click',e=>{const b=e.target.closest('[data-go]');if(b)nav(b.dataset.go)});
 
 const PHOTO_DB_NAME="uslPaintPhotoDB",PHOTO_STORE="photos",PHOTO_LIMIT=12;
 function photoDb(){return new Promise((resolve,reject)=>{const req=indexedDB.open(PHOTO_DB_NAME,1);req.onupgradeneeded=()=>{const db=req.result;if(!db.objectStoreNames.contains(PHOTO_STORE)){const st=db.createObjectStore(PHOTO_STORE,{keyPath:"id"});st.createIndex("projectId","projectId",{unique:false})}};req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)})}
@@ -201,7 +201,7 @@ function calc(){
   sale=Math.ceil(sale/5)*5;
   return{sale,direct,profit:sale-direct,margin:sale?(sale-direct)/sale:0,targetMargin:selectedMargin,hours,productionHours,setupCleanupHours,painterDays,painterHourly,subcontractorPayout,days:hours?Math.ceil(painterDays):0,gallons,groups:Object.values(groups),primerGroups:Object.values(primerGroups),primerGallons,primerCost,roomBreakdown,selected:state.rooms.filter(r=>r.selected&&scopeSummary(r)!=='None').length,marketSale,marginFloor,minimumJob:hasWork?PRICING.minimumJob:0,materialCost,paintCost,suppliesCost,suppliesTier,repairHours,repairMaterials,laborCost};
 }
-function refreshAll(){
+function refreshAll(){renderWorkflow();
   const c=calc(),p=state.project;
   $('homeProjectLabel').textContent=p.customerName||p.address||'No project started';
   $('homePrice').textContent=money(c.sale);
@@ -227,7 +227,63 @@ function renderMarginControls(){const m=Math.round(targetMargin()*100),custom=$(
 function setTargetMarginPct(v){let pct=Math.round(+v||40);pct=Math.max(20,Math.min(89,pct));state.pricing=state.pricing||{};state.pricing.targetMargin=pct/100;save();renderMarginControls()}
 document.querySelectorAll("[data-margin]").forEach(b=>b.onclick=()=>setTargetMarginPct(b.dataset.margin));if($("customMargin"))$("customMargin").onchange=e=>{if(String(e.target.value).trim()!=="")setTargetMarginPct(e.target.value)};
 [['applyWalls','wall'],['applyCeilings','ceiling'],['applyTrim','trim']].forEach(([id,k])=>{$(id).onclick=()=>{const color=$(k==='wall'?'defaultWallColor':k==='ceiling'?'defaultCeilingColor':'defaultTrimColor').value,sw=$(k==='wall'?'defaultWallSw':k==='ceiling'?'defaultCeilingSw':'defaultTrimSw').value;state.rooms.filter(r=>r.selected).forEach(r=>{r[k+'Color']=color;r[k+'Sw']=sw});save();renderColors()}});
-$('newProjectBtn').onclick=()=>{if(confirm('Start a new estimate? This clears the current project on this device.')){state=fresh();save();bindProject();bindPhotoInputs();bindSubcontractor();renderRooms();renderColors()}};if($('printSubcontractor'))$('printSubcontractor').onclick=()=>{document.body.classList.add('print-subcontractor');renderSubcontractor();window.print();setTimeout(()=>document.body.classList.remove('print-subcontractor'),300)};window.addEventListener('afterprint',()=>document.body.classList.remove('print-subcontractor'));$('printProposal').onclick=()=>{const p=state.project||{};const missing=[];if(!String(p.customerName||'').trim())missing.push('customer name');if(!String(p.address||'').trim())missing.push('street address');if(missing.length){alert('Complete '+missing.join(' and ')+' before finalizing the proposal.');nav('project');return}window.print()};
+
+// V6.9 — Estimate Mode / Project Mode foundation
+function snapshotApprovedEstimate(){
+  const c=calc();
+  return {
+    capturedAt:new Date().toISOString(),
+    project:JSON.parse(JSON.stringify(state.project||{})),
+    rooms:JSON.parse(JSON.stringify(state.rooms||[])),
+    colors:JSON.parse(JSON.stringify(state.colors||{})),
+    pricing:JSON.parse(JSON.stringify(state.pricing||{})),
+    totals:{sale:c.sale,directCost:c.directCost,grossProfit:c.grossProfit,margin:c.margin,hours:c.hours,painterDays:c.painterDays,subcontractorPayout:c.subcontractorPayout,gallons:c.totalBuyGallons||0},
+    proposalHTML:$('proposalContent')?($('proposalContent').innerHTML||''):''
+  };
+}
+function renderWorkflow(){
+  const w=state.workflow||(state.workflow={mode:'estimate',estimateStatus:'Draft',projectStatus:'Not Started',approvedAt:'',approvedSnapshot:null});
+  const isProject=w.mode==='project'&&w.approvedSnapshot;
+  const title=$('modeTitle'),sub=$('modeSubtitle'),badge=$('modeBadge'),content=$('workflowContent');
+  if(title)title.textContent=isProject?'PROJECT MODE':'ESTIMATE MODE';
+  if(sub)sub.textContent=isProject?'Active · execute the approved scope without changing the estimate':'Active · customer intake, scope, colors, pricing & proposal';
+  if(badge)badge.textContent=isProject?'PROJECT':'ACTIVE';
+  if(!content)return;
+  if(!isProject){
+    content.innerHTML=`<div class="status-row"><span>Estimate status</span><strong>${w.estimateStatus||'Draft'}</strong></div><p class="muted">When the customer approves the proposal, convert it to a project. UrbanSkyLine will preserve a locked snapshot of the approved scope, price and estimated costs.</p><button class="primary full" id="convertProjectBtn" type="button">Customer Approved — Convert to Project</button>`;
+    const b=$('convertProjectBtn'); if(b)b.onclick=convertToProject;
+  }else{
+    const s=w.approvedSnapshot,t=s.totals||{};
+    content.innerHTML=`<div class="status-row"><span>Project status</span><strong>${w.projectStatus||'Approved'}</strong></div><div class="status-row"><span>Approved contract</span><strong>${money(t.sale)}</strong></div><div class="status-row"><span>Approved on</span><strong>${w.approvedAt?new Date(w.approvedAt).toLocaleString():'—'}</strong></div><p class="muted">Approved estimate locked. Execution activity will be tracked separately.</p><button class="primary full" type="button" data-go="execution">Open Project Execution</button>`;
+  }
+}
+function convertToProject(){
+  const p=state.project||{}, selected=(state.rooms||[]).filter(r=>r.selected);
+  if(!String(p.customerName||'').trim()||!String(p.address||'').trim()){alert('Complete customer name and project address before converting to a project.');nav('project');return;}
+  if(!selected.length){alert('Select at least one room before converting to a project.');nav('rooms');return;}
+  renderProposal();
+  const c=calc();
+  const ok=confirm(`Convert this approved estimate to Project Mode?\n\nApproved contract: ${money(c.sale)}\nSelected rooms: ${selected.length}\n\nA locked snapshot will be preserved. Later execution changes will not overwrite the approved estimate.`);
+  if(!ok)return;
+  state.workflow={mode:'project',estimateStatus:'Approved',projectStatus:'Approved',approvedAt:new Date().toISOString(),approvedSnapshot:snapshotApprovedEstimate()};
+  localStorage.setItem('uslPaintApp',JSON.stringify(state));refreshAll();renderWorkflow();nav('execution');
+}
+function renderExecution(){
+  const w=state.workflow||{},s=w.approvedSnapshot,el=$('approvedSnapshot');
+  if(!s){if(el)el.innerHTML='<p>No approved estimate snapshot yet.</p>';return;}
+  const t=s.totals||{},rooms=(s.rooms||[]).filter(r=>r.selected).map(r=>r.name).join(', ')||'—';
+  if(el)el.innerHTML=`<div class="snapshot-grid"><div><small>Customer</small><strong>${s.project?.customerName||'—'}</strong></div><div><small>Approved Contract</small><strong>${money(t.sale)}</strong></div><div><small>Rooms</small><strong>${rooms}</strong></div><div><small>Estimated Painter Hours</small><strong>${Number(t.hours||0).toFixed(1)}</strong></div><div><small>Estimated Direct Cost</small><strong>${money(t.directCost)}</strong></div><div><small>Expected Margin</small><strong>${Math.round((t.margin||0)*100)}%</strong></div></div>`;
+  if($('executionStatus'))$('executionStatus').textContent=w.projectStatus||'Approved';
+  if($('executionContract'))$('executionContract').textContent=money(t.sale);
+  if($('executionCost'))$('executionCost').textContent=money(t.directCost);
+  if($('executionProfit'))$('executionProfit').textContent=money(t.grossProfit);
+}
+function viewApprovedProposal(){
+  const s=state.workflow?.approvedSnapshot;if(!s)return;
+  nav('proposal');
+  if(s.proposalHTML&&$('proposalContent'))$('proposalContent').innerHTML=s.proposalHTML;
+}
+$('newProjectBtn').onclick=()=>{if(confirm('Start a new estimate? This clears the current estimate/project and its local approved snapshot on this device.')){state=fresh();save();bindProject();bindPhotoInputs();bindSubcontractor();renderRooms();renderColors()}};if($('printSubcontractor'))$('printSubcontractor').onclick=()=>{document.body.classList.add('print-subcontractor');renderSubcontractor();window.print();setTimeout(()=>document.body.classList.remove('print-subcontractor'),300)};window.addEventListener('afterprint',()=>document.body.classList.remove('print-subcontractor'));$('printProposal').onclick=()=>{const p=state.project||{};const missing=[];if(!String(p.customerName||'').trim())missing.push('customer name');if(!String(p.address||'').trim())missing.push('street address');if(missing.length){alert('Complete '+missing.join(' and ')+' before finalizing the proposal.');nav('project');return}window.print()};
 function plural(n,one,many){return `${n} ${n===1?one:many}`}
 function proposalScope(r){const q=roomQty(r),items=[];if(include(r,'walls'))items.push('Walls');if(include(r,'ceiling'))items.push('Ceiling');if(include(r,'baseboards'))items.push(`${Math.round(q.baseLf)} LF baseboards`);if(include(r,'doors'))items.push(`${plural(q.doors,'interior door','interior doors')}, ${r.doorSides==='One Side'?'one side':'both sides'}${r.doorCasing?' + casing/trim':''}`);if(include(r,'windows'))items.push(plural(q.windows,'window','windows'));if(include(r,'closets')){const parts=[];if(r.closetWalls)parts.push('walls');if(r.closetCeiling)parts.push('ceiling');if(r.closetBaseboards)parts.push('baseboards');items.push(`${r.closetType||'Reach-in'} closet — ${parts.join(', ')}`)}if(include(r,'crown'))items.push(`${Math.round(q.crownLf)} LF crown molding`);if(r.primerMode&&r.primerMode!=='None')items.push(r.primerMode+(r.primerMode==='Full Prime'?' — '+(r.primerTarget||'Walls'):''));const rep=repairCalc(r);rep.items.forEach(x=>items.push(`${x.qty} × ${x.label}`));return items.join('<br>')||'No work selected'}
 function proposalPaint(r){const m=materialSettings(),lines=[];if(include(r,'walls')||(include(r,'closets')&&r.closetWalls))lines.push(`Walls: ${m.wallProduct} — ${r.wallColor||'Color TBD'}${r.wallSw?' ('+r.wallSw+')':''}`);if(include(r,'ceiling')||(include(r,'closets')&&r.closetCeiling))lines.push(`Ceiling: ${m.ceilingProduct} — ${r.ceilingColor||'Color TBD'}${r.ceilingSw?' ('+r.ceilingSw+')':''}`);if(include(r,'baseboards')||include(r,'doors')||include(r,'windows')||include(r,'crown')||(include(r,'closets')&&r.closetBaseboards))lines.push(`Trim: ${m.trimProduct} — ${r.trimColor||'Color TBD'}${r.trimSw?' ('+r.trimSw+')':''}`);if(r.primerMode&&r.primerMode!=='None')lines.push(`Primer: ${materialSettings().primerProduct} — ${r.primerMode}${r.primerMode==='Full Prime'?' ('+(r.primerTarget||'Walls')+')':''}`);return lines.join('<br>')}
@@ -362,7 +418,7 @@ $("address")?.addEventListener("input",e=>{
   uslAddressTimer=setTimeout(()=>uslAddressSearch(e.target.value),350);
 });
 
-bindProject();bindPhotoInputs();bindMaterialSettings();bindSubcontractor();renderRooms();renderColors();refreshAll();
+bindProject();bindPhotoInputs();bindMaterialSettings();bindSubcontractor();renderRooms();renderColors();refreshAll();renderWorkflow();if($('viewApprovedProposal'))$('viewApprovedProposal').onclick=viewApprovedProposal;
 
 // V6.8 — installed PWA update manager. Project/settings data remains in localStorage.
 (() => {
