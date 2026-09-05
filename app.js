@@ -4,7 +4,7 @@ let uslAddressTimer;
 async function uslAddressSearch(q){const box=$("addressSuggestions");if(q.trim().length<4){box.innerHTML="";return}try{const d=await uslApi("addressAutocomplete",{input:q});box.innerHTML=(d.suggestions||[]).map(x=>`<button type="button" data-id="${x.placeId}">${x.text}</button>`).join("");box.querySelectorAll("button").forEach(b=>b.onclick=async()=>{const x=await uslApi("placeDetails",{placeId:b.dataset.id});$("address").value=x.street||x.formattedAddress;$("cityZip").value=[x.city,x.state,x.zip].filter(Boolean).join(" ");state.project.address=$("address").value;state.project.cityZip=$("cityZip").value;save();box.innerHTML=""})}catch(e){if($("syncMessage"))$("syncMessage").textContent=e.message}}
 const ROOM_PRESETS=[["Living Room",16,20,9,1450],["Master Bedroom",14,18,9,1250],["Bedroom 1",11,12,9,950],["Bedroom 2",11,13,9,950],["Bedroom 3",11,12,9,950],["Bedroom 4",11,12,9,950],["Kitchen",12,16,9,1050],["Dining Room",12,14,9,1050],["Office / Study",10,12,9,900],["Laundry Room",7,9,9,600],["Hallway / Stairs",8,12,9,900],["Entry / Foyer",8,10,9,800],["Game / Media Room",14,16,9,1200],["Custom Room 1",10,10,9,900],["Custom Room 2",10,10,9,900],["Garage",24,24,9,1800]];
 const fresh=()=>({project:{customerName:"",phone:"",email:"",address:"",cityZip:"",estimator:"Roberto Diaz",projectType:"Interior Painting",wallCondition:"Good",notes:""},rooms:ROOM_PRESETS.map(r=>({name:r[0],length:r[1],width:r[2],height:r[3],price:r[4],selected:false,package:"Full Room",walls:"Auto",ceiling:"Auto",trim:"Auto",baseboards:"Auto",doors:"Auto",windows:"Auto",closets:"No",crown:"No",doorCount:1,doorSides:"Both Sides",doorCasing:false,windowCount:1,closetWallSf:0,closetType:"None",closetLength:6,closetWidth:6,closetWalls:true,closetCeiling:true,closetBaseboards:true,crownLf:0,wallColor:"Main Wall Color",wallSw:"",ceilingColor:"Ceiling White",ceilingSw:"",trimColor:"Trim White",trimSw:""}))});
-let state;try{state=JSON.parse(localStorage.getItem("uslPaintApp"))||fresh()}catch(e){state=fresh()}const $=id=>document.getElementById(id),money=n=>new Intl.NumberFormat("en-US",{style:"currency",currency:"USD",maximumFractionDigits:0}).format(n||0),esc=s=>String(s||"").replaceAll('"','&quot;');function save(){localStorage.setItem("uslPaintApp",JSON.stringify(state));refreshAll()}function nav(v){document.querySelectorAll('.view').forEach(x=>x.classList.toggle('active',x.dataset.view===v));window.scrollTo(0,0);if(v==='proposal')renderProposal()}document.addEventListener('click',e=>{const b=e.target.closest('[data-go]');if(b)nav(b.dataset.go)});
+let state;try{state=JSON.parse(localStorage.getItem("uslPaintApp"))||fresh()}catch(e){state=fresh()}const $=id=>document.getElementById(id),money=n=>new Intl.NumberFormat("en-US",{style:"currency",currency:"USD",maximumFractionDigits:0}).format(n||0),money2=n=>new Intl.NumberFormat("en-US",{style:"currency",currency:"USD",minimumFractionDigits:2,maximumFractionDigits:2}).format(n||0),esc=s=>String(s||"").replaceAll('"','&quot;');function save(){localStorage.setItem("uslPaintApp",JSON.stringify(state));refreshAll()}function nav(v){document.querySelectorAll('.view').forEach(x=>x.classList.toggle('active',x.dataset.view===v));window.scrollTo(0,0);if(v==='proposal')renderProposal()}document.addEventListener('click',e=>{const b=e.target.closest('[data-go]');if(b)nav(b.dataset.go)});
 function bindProject(){Object.keys(state.project).forEach(k=>{const e=$(k);if(e){e.value=state.project[k]||'';e.oninput=()=>{state.project[k]=e.value;save()}}});document.querySelector('.save').onclick=()=>{save();nav('home')}}
 const expandedRooms=new Set();
 function normalizeRoom(r){
@@ -85,8 +85,65 @@ function roomMarketPrice(r,q=roomQty(r)){
   const fh=componentHours(full,q), fullHours=fh.walls+fh.ceiling+fh.baseboards+fh.doors+fh.windows;
   return fullHours>0?r.price*(selected/fullHours):0;
 }
-function calc(){let marketSale=0,productionHours=0;const groups={};const group=(surface,color,sw,product,sf)=>{const k=[surface,color||'Unassigned',sw||'',product].join('|');if(!groups[k])groups[k]={surface,color:color||'Unassigned',sw:sw||'',product,sf:0};groups[k].sf+=sf};state.rooms.forEach(r=>{if(!r.selected)return;const q=roomQty(r);const h=componentHours(r,q),workHours=h.walls+h.closets+h.ceiling+h.baseboards+h.doors+h.windows+h.crown;if(workHours<=0)return;marketSale+=roomMarketPrice(r,q);productionHours+=workHours;if(q.includedWallSf)group('Walls',r.wallColor,r.wallSw,'ProMar 200 Eggshell',q.includedWallSf);if(q.includedCeilingSf)group('Ceiling',r.ceilingColor,r.ceilingSw,'ProMar 200 Flat',q.includedCeilingSf);if(q.includedTrimEqSf)group('Trim',r.trimColor,r.trimSw,'Emerald Urethane Trim Enamel',q.includedTrimEqSf)});const setupCleanupHours=productionHours*PRICING.setupCleanupPct,hours=productionHours+setupCleanupHours,painterDays=hours/PRICING.hoursPerDay,painterHourly=PRICING.painterDayRate/PRICING.hoursPerDay,subcontractorPayout=hours*painterHourly;let gallons=0;Object.values(groups).forEach(g=>{g.calcGal=g.sf*2/350*1.05;g.buyGal=Math.ceil(g.calcGal);gallons+=g.buyGal});const materialCost=gallons*PRICING.materialPerGallon,laborCost=subcontractorPayout,direct=materialCost+laborCost;const marginFloor=direct/(1-PRICING.targetMargin);const hasWork=state.rooms.some(r=>r.selected&&scopeSummary(r)!=='None');let sale=hasWork?Math.max(marketSale,marginFloor,PRICING.minimumJob):0;sale=Math.ceil(sale/5)*5;return{sale,direct,profit:sale-direct,margin:sale?(sale-direct)/sale:0,hours,productionHours,setupCleanupHours,painterDays,painterHourly,subcontractorPayout,days:hours?Math.ceil(painterDays):0,gallons,groups:Object.values(groups),selected:state.rooms.filter(r=>r.selected&&scopeSummary(r)!=='None').length,marketSale,marginFloor,minimumJob:hasWork?PRICING.minimumJob:0,materialCost,laborCost}}
-function refreshAll(){const c=calc(),p=state.project;$('homeProjectLabel').textContent=p.customerName||p.address||'No project started';$('homePrice').textContent=money(c.sale);$('statusRooms').textContent=c.selected;$('statusGallons').textContent=c.gallons;$('statusDays').textContent=c.days;$('statusMargin').textContent=Math.round(c.margin*100)+'%';$('salePrice').textContent=money(c.sale);$('directCost').textContent=money(c.direct);$('grossProfit').textContent=money(c.profit);$('grossMargin').textContent=Math.round(c.margin*100)+'%';$('laborHours').textContent=c.hours.toFixed(1);$('jobDays').textContent=c.days;$('paintGallons').textContent=c.gallons;$('selectedCount').textContent=c.selected;$('materialSummary').innerHTML=c.groups.length?c.groups.map(g=>`<div class="material-row"><span>${g.surface}<br><small>${g.color}${g.sw?' • '+g.sw:''}</small></span><span>${g.product}<br><small>${Math.round(g.sf)} sq ft</small></span><strong>${g.buyGal} gal</strong></div>`).join(''):'<p class="muted">Select rooms to calculate materials.</p>';if($('marketComponentPrice'))$('marketComponentPrice').textContent=money(c.marketSale);if($('marginFloorPrice'))$('marginFloorPrice').textContent=money(c.marginFloor);if($('minimumJobPrice'))$('minimumJobPrice').textContent=money(c.minimumJob);if($('pricingRule'))$('pricingRule').textContent='Highest of component market price, 40% margin floor, or $250 minimum job';if($('productionHours'))$('productionHours').textContent=c.productionHours.toFixed(1);if($('setupCleanupHours'))$('setupCleanupHours').textContent=c.setupCleanupHours.toFixed(1);if($('painterDays'))$('painterDays').textContent=c.painterDays.toFixed(2);if($('painterDayRate'))$('painterDayRate').textContent=money(PRICING.painterDayRate);if($('painterHourlyRate'))$('painterHourlyRate').textContent=money(c.painterHourly)+'/hr';if($('subcontractorPayout'))$('subcontractorPayout').textContent=money(c.subcontractorPayout);if($('materialCostInternal'))$('materialCostInternal').textContent=money(c.materialCost);}
+function calc(){
+  let marketSale=0,productionHours=0;
+  const groups={},roomBreakdown=[];
+  const group=(surface,color,sw,product,sf)=>{
+    const k=[surface,color||'Unassigned',sw||'',product].join('|');
+    if(!groups[k])groups[k]={surface,color:color||'Unassigned',sw:sw||'',product,sf:0};
+    groups[k].sf+=sf;
+  };
+  state.rooms.forEach(r=>{
+    if(!r.selected)return;
+    const q=roomQty(r),h=componentHours(r,q);
+    const workHours=h.walls+h.closets+h.ceiling+h.baseboards+h.doors+h.windows+h.crown;
+    if(workHours<=0)return;
+    marketSale+=roomMarketPrice(r,q);
+    productionHours+=workHours;
+    roomBreakdown.push({name:r.name,total:workHours,...h});
+    if(q.includedWallSf)group('Walls',r.wallColor,r.wallSw,'ProMar 200 Eggshell',q.includedWallSf);
+    if(q.includedCeilingSf)group('Ceiling',r.ceilingColor,r.ceilingSw,'ProMar 200 Flat',q.includedCeilingSf);
+    if(q.includedTrimEqSf)group('Trim',r.trimColor,r.trimSw,'Emerald Urethane Trim Enamel',q.includedTrimEqSf);
+  });
+  const setupCleanupHours=productionHours*PRICING.setupCleanupPct;
+  const hours=productionHours+setupCleanupHours;
+  const painterDays=hours/PRICING.hoursPerDay;
+  const painterHourly=PRICING.painterDayRate/PRICING.hoursPerDay;
+  const subcontractorPayout=hours*painterHourly;
+  let gallons=0;
+  Object.values(groups).forEach(g=>{
+    g.calcGal=g.sf*2/350*1.05;
+    g.buyGal=Math.ceil(g.calcGal);
+    gallons+=g.buyGal;
+  });
+  const materialCost=gallons*PRICING.materialPerGallon,laborCost=subcontractorPayout,direct=materialCost+laborCost;
+  const marginFloor=direct/(1-PRICING.targetMargin);
+  const hasWork=state.rooms.some(r=>r.selected&&scopeSummary(r)!=='None');
+  let sale=hasWork?Math.max(marketSale,marginFloor,PRICING.minimumJob):0;
+  sale=Math.ceil(sale/5)*5;
+  return{sale,direct,profit:sale-direct,margin:sale?(sale-direct)/sale:0,hours,productionHours,setupCleanupHours,painterDays,painterHourly,subcontractorPayout,days:hours?Math.ceil(painterDays):0,gallons,groups:Object.values(groups),roomBreakdown,selected:state.rooms.filter(r=>r.selected&&scopeSummary(r)!=='None').length,marketSale,marginFloor,minimumJob:hasWork?PRICING.minimumJob:0,materialCost,laborCost};
+}
+function refreshAll(){
+  const c=calc(),p=state.project;
+  $('homeProjectLabel').textContent=p.customerName||p.address||'No project started';
+  $('homePrice').textContent=money(c.sale);
+  $('statusRooms').textContent=c.selected;$('statusGallons').textContent=c.gallons;$('statusDays').textContent=c.days;$('statusMargin').textContent=Math.round(c.margin*100)+'%';
+  $('salePrice').textContent=money(c.sale);$('directCost').textContent=money(c.direct);$('grossProfit').textContent=money(c.profit);$('grossMargin').textContent=Math.round(c.margin*100)+'%';
+  $('laborHours').textContent=c.hours.toFixed(1);$('jobDays').textContent=c.days;$('paintGallons').textContent=c.gallons;$('selectedCount').textContent=c.selected;
+  $('materialSummary').innerHTML=c.groups.length?c.groups.map(g=>`<div class="material-row"><span>${g.surface}<br><small>${g.color}${g.sw?' • '+g.sw:''}</small></span><span>${g.product}<br><small>${Math.round(g.sf)} sq ft • ${g.calcGal.toFixed(2)} gal calculated</small></span><strong>${g.buyGal} gal buy</strong></div>`).join(''):'<p class="muted">Select rooms to calculate materials.</p>';
+  if($('marketComponentPrice'))$('marketComponentPrice').textContent=money(c.marketSale);
+  if($('marginFloorPrice'))$('marginFloorPrice').textContent=money(c.marginFloor);
+  if($('minimumJobPrice'))$('minimumJobPrice').textContent=money(c.minimumJob);
+  if($('pricingRule'))$('pricingRule').textContent='Highest of component market price, 40% margin floor, or $250 minimum job';
+  if($('productionHours'))$('productionHours').textContent=c.productionHours.toFixed(1);
+  if($('setupCleanupHours'))$('setupCleanupHours').textContent=c.setupCleanupHours.toFixed(1);
+  if($('painterDays'))$('painterDays').textContent=c.painterDays.toFixed(2);
+  if($('painterDayRate'))$('painterDayRate').textContent=money(PRICING.painterDayRate);
+  if($('painterHourlyRate'))$('painterHourlyRate').textContent=money2(c.painterHourly)+'/hr';
+  if($('subcontractorPayout'))$('subcontractorPayout').textContent=money(c.subcontractorPayout);
+  if($('materialCostInternal'))$('materialCostInternal').textContent=money(c.materialCost);
+  if($('productionBreakdown'))$('productionBreakdown').innerHTML=c.roomBreakdown.length?c.roomBreakdown.map(r=>`<div class="status-row"><span>${r.name}<small class="prod-detail">Walls ${r.walls.toFixed(1)} • Ceiling ${r.ceiling.toFixed(1)} • Base ${r.baseboards.toFixed(1)} • Doors ${r.doors.toFixed(1)} • Windows ${r.windows.toFixed(1)}${r.closets?` • Closet ${r.closets.toFixed(1)}`:''}${r.crown?` • Crown ${r.crown.toFixed(1)}`:''}</small></span><strong>${r.total.toFixed(1)} hr</strong></div>`).join(''):'<p class="muted">Select rooms to see production hours.</p>';
+}
 [['applyWalls','wall'],['applyCeilings','ceiling'],['applyTrim','trim']].forEach(([id,k])=>{$(id).onclick=()=>{const color=$(k==='wall'?'defaultWallColor':k==='ceiling'?'defaultCeilingColor':'defaultTrimColor').value,sw=$(k==='wall'?'defaultWallSw':k==='ceiling'?'defaultCeilingSw':'defaultTrimSw').value;state.rooms.filter(r=>r.selected).forEach(r=>{r[k+'Color']=color;r[k+'Sw']=sw});save();renderColors()}});
 $('newProjectBtn').onclick=()=>{if(confirm('Start a new estimate? This clears the current project on this device.')){state=fresh();save();bindProject();renderRooms();renderColors()}};$('printProposal').onclick=()=>{const p=state.project||{};const missing=[];if(!String(p.customerName||'').trim())missing.push('customer name');if(!String(p.address||'').trim())missing.push('street address');if(missing.length){alert('Complete '+missing.join(' and ')+' before finalizing the proposal.');nav('project');return}window.print()};
 function plural(n,one,many){return `${n} ${n===1?one:many}`}
