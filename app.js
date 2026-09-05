@@ -203,9 +203,17 @@ function calc(){
 }
 function refreshAll(){renderWorkflow();
   const c=calc(),p=state.project;
-  $('homeProjectLabel').textContent=p.customerName||p.address||'No project started';
-  $('homePrice').textContent=money(c.sale);
-  $('statusRooms').textContent=c.selected;$('statusGallons').textContent=c.gallons;$('statusDays').textContent=c.days;$('statusMargin').textContent=Math.round(c.margin*100)+'%';
+  const w=state.workflow||{}, isProject=w.mode==='project'&&w.approvedSnapshot, snap=isProject?w.approvedSnapshot:null, t=snap?.totals||{};
+  $('homeProjectLabel').textContent=(isProject?(snap?.project?.customerName||snap?.project?.address):(p.customerName||p.address))||'No project started';
+  if($('homeHeroEyebrow'))$('homeHeroEyebrow').textContent=isProject?'CURRENT PROJECT':'CURRENT ESTIMATE';
+  if($('homeHeroSubtitle'))$('homeHeroSubtitle').textContent=isProject?'Approved contract · locked estimate':'Customer-facing estimate workflow';
+  $('homePrice').textContent=isProject?money(t.sale):money(c.sale);
+  if($('estimateWorkflowLabel'))$('estimateWorkflowLabel').textContent=isProject?'Approved Estimate Reference':'Estimate Workflow';
+  if($('estimateReferenceBadge'))$('estimateReferenceBadge').hidden=!isProject;
+  $('statusRooms').textContent=isProject?(snap?.rooms||[]).filter(r=>r.selected&&scopeSummary(r)!=='None').length:c.selected;
+  $('statusGallons').textContent=isProject?(t.gallons||0):c.gallons;
+  $('statusDays').textContent=isProject?(t.calendarDays||Math.ceil(Number(t.painterDays||0))):c.days;
+  $('statusMargin').textContent=isProject?Math.round(Number(t.margin||0)*100)+'%':Math.round(c.margin*100)+'%';
   $('salePrice').textContent=money(c.sale);$('directCost').textContent=money(c.direct);$('grossProfit').textContent=money(c.profit);$('grossMargin').textContent=Math.round(c.margin*100)+'%';
   $('laborHours').textContent=c.hours.toFixed(1);$('jobDays').textContent=c.days;$('paintGallons').textContent=c.gallons;$('selectedCount').textContent=c.selected;
   $('materialSummary').innerHTML=(c.groups.length||c.primerGroups.length)?c.groups.map(g=>`<div class="material-row"><span>${g.surface}<br><small>${g.color}${g.sw?' • '+g.sw:''}</small></span><span>${g.product}<br><small>${Math.round(g.sf)} sq ft • 2 coats • ${g.coverage} sq ft/gal</small><br><small>${g.baseGal.toFixed(2)} gal coating + 10% waste = <strong>${g.calcGal.toFixed(2)} gal required</strong></small></span><strong>Buy ${g.buyGal} gal<br><small>${money2(g.unitCost)}/gal · ${money2(g.extCost)}</small></strong></div>`).join('')+c.primerGroups.map(g=>`<div class="material-row"><span>Primer<br><small>${g.spotRooms?'Spot Prime':'Full Prime'}</small></span><span>${g.product}<br><small>${g.spotRooms?g.spotRooms+' room spot-prime allowance':Math.round(g.sf)+' sq ft • 1 coat • 400 sq ft/gal'}</small>${g.spotRooms?'':`<br><small>${g.baseGal.toFixed(2)} gal coating + 10% waste = <strong>${g.calcGal.toFixed(2)} gal required</strong></small>`}</span><strong>Buy ${g.buyGal} gal<br><small>${money2(g.unitCost)}/gal · ${money2(g.extCost)}</small></strong></div>`).join('')+'<p class="muted material-note">Finish paint: 400 sq ft/gal; 2 coats; 10% waste. Full primer: 400 sq ft/gal; 1 coat; 10% waste. Primer is only included when selected.</p>':'<p class="muted">Select rooms to calculate materials.</p>';
@@ -237,7 +245,7 @@ function snapshotApprovedEstimate(){
     rooms:JSON.parse(JSON.stringify(state.rooms||[])),
     colors:JSON.parse(JSON.stringify(state.colors||{})),
     pricing:JSON.parse(JSON.stringify(state.pricing||{})),
-    totals:{sale:c.sale,directCost:c.direct,grossProfit:c.profit,margin:c.margin,hours:c.hours,painterDays:c.painterDays,subcontractorPayout:c.subcontractorPayout,gallons:c.gallons||0},
+    totals:{sale:c.sale,directCost:c.direct,grossProfit:c.profit,margin:c.margin,hours:c.hours,painterDays:c.painterDays,calendarDays:c.days,subcontractorPayout:c.subcontractorPayout,gallons:c.gallons||0},
     proposalHTML:$('proposalContent')?($('proposalContent').innerHTML||''):''
   };
 }
