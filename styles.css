@@ -28,3 +28,20 @@
 .closet-types-three{grid-template-columns:repeat(3,1fr)}
 .repair-collapsed{margin-top:14px}.repair-toggle{width:100%;min-height:58px;border:1px solid #dfccb0;border-radius:14px;background:#fffaf3;padding:11px 13px;display:grid;grid-template-columns:1fr auto;gap:2px 12px;text-align:left;align-items:center;color:#5a3c1f}.repair-toggle span{font-weight:900}.repair-toggle small{grid-column:1/2;color:#806b56;line-height:1.3}.repair-toggle strong{grid-column:2;grid-row:1/3;color:#8b5d26}.repair-collapsed.has-repairs .repair-toggle{background:#f8f0e1;border-color:#c7a46d}.repair-collapsed .repair-box{margin-top:8px}
 @media(max-width:640px){.closet-types-three{grid-template-columns:1fr}.repair-toggle{grid-template-columns:1fr auto}.repair-toggle small{max-width:70vw}}
+
+/* V6.5 adjustable margin + mobile address connection */
+.margin-control{padding:12px 0 16px;border-bottom:1px solid rgba(255,255,255,.08);margin-bottom:8px}.margin-title{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}.margin-title span{font-size:22px;font-weight:800}.margin-buttons{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}.margin-buttons button{min-height:44px;border-radius:10px;border:1px solid rgba(183,145,83,.45);background:#24170f;color:#f5ead7;font-weight:800}.margin-buttons button.active{background:#b78f53;color:#140c07;border-color:#b78f53}.custom-margin{display:flex;align-items:center;gap:10px;margin-top:10px;font-weight:700}.custom-margin input{max-width:120px}.address-help{display:block;margin-top:6px;font-size:12px;line-height:1.35}.address-help.warning{color:#f0c36a}.address-help.success{color:#9bd3a8}.address-help.working{color:#d9c5a0}.address-help.error{color:#ff9d9d}@media(max-width:560px){.margin-buttons{grid-template-columns:repeat(3,1fr)}.margin-buttons button{min-height:48px}}
+
+/* V6.6 proposal branding + estimate photos */
+.proposal-brand{display:flex;align-items:center;gap:16px;border-bottom:2px solid rgba(184,137,57,.35);padding-bottom:14px;margin-bottom:16px}
+.proposal-logo{width:140px;max-height:90px;object-fit:contain;border-radius:8px;background:#140c07;padding:6px}
+.proposal-brand h2,.proposal-brand p{margin:0 0 4px}
+.photo-actions{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}
+.photo-button{display:inline-flex;align-items:center;justify-content:center;cursor:pointer;min-width:140px}
+.photo-message{margin:6px 0 12px}
+.photo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
+.photo-card{position:relative;border:1px solid rgba(184,137,57,.28);border-radius:10px;overflow:hidden;background:#fff;min-height:110px}
+.photo-card img{display:block;width:100%;height:130px;object-fit:cover}
+.photo-remove{position:absolute;right:6px;bottom:6px;border:0;border-radius:999px;padding:6px 9px;background:rgba(20,12,7,.82);color:#fff;font-weight:700;font-size:12px}
+@media(max-width:600px){.proposal-brand{align-items:flex-start}.proposal-logo{width:105px}.photo-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.photo-card img{height:120px}}
+@media print{.proposal-logo{display:block!important;print-color-adjust:exact;-webkit-print-color-adjust:exact}.proposal-brand{page-break-inside:avoid}.project-photos-panel{display:none!important}}
