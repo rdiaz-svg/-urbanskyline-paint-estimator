@@ -5,7 +5,7 @@ Changes:
 - Hourly rate displays with two decimals.
 - Product/color material groups are combined before whole-gallon rounding.
 - Material coverage assumption set to 400 sq ft per gallon for ProMar 200 Eggshell, ProMar 200 Flat, and Emerald Urethane Trim Enamel.
-- Two finish coats plus 5% waste.
+- Two finish coats plus 10% waste.
 - Materials panel now shows coating gallons, waste-adjusted gallons required, and whole gallons to buy.
 - Existing production rates and 15% project-level setup/cleanup remain unchanged.
 
