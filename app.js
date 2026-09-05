@@ -363,3 +363,55 @@ $("address")?.addEventListener("input",e=>{
 });
 
 bindProject();bindPhotoInputs();bindMaterialSettings();bindSubcontractor();renderRooms();renderColors();refreshAll();
+
+// V6.8 — installed PWA update manager. Project/settings data remains in localStorage.
+(() => {
+  const CURRENT_VERSION = '6.8';
+  const banner = () => document.getElementById('updateBanner');
+  const compareVersions = (a,b) => {
+    const aa=String(a).split('.').map(Number), bb=String(b).split('.').map(Number);
+    for(let i=0;i<Math.max(aa.length,bb.length);i++){ const d=(aa[i]||0)-(bb[i]||0); if(d) return d; }
+    return 0;
+  };
+  async function checkForUrbanSkyLineUpdate(){
+    try{
+      const res=await fetch(`version.json?t=${Date.now()}`,{cache:'no-store'});
+      if(!res.ok) return;
+      const info=await res.json();
+      const dismissed=sessionStorage.getItem('uslDismissedUpdate');
+      if(compareVersions(info.version,CURRENT_VERSION)>0 && dismissed!==info.version){
+        const b=banner(); if(!b) return;
+        const text=document.getElementById('updateVersionText');
+        if(text) text.textContent=`Version ${info.version} is ready. Your saved projects and settings will be preserved.`;
+        b.dataset.version=info.version; b.hidden=false;
+      }
+    }catch(e){ /* Offline: keep current installed version. */ }
+  }
+  async function applyUrbanSkyLineUpdate(){
+    const b=banner(); if(b) b.classList.add('update-working');
+    const btn=document.getElementById('updateAppBtn'); if(btn) btn.textContent='Updating…';
+    try{
+      if('serviceWorker' in navigator){
+        const reg=await navigator.serviceWorker.getRegistration();
+        if(reg){ await reg.update(); if(reg.waiting) reg.waiting.postMessage({type:'SKIP_WAITING'}); }
+      }
+      if('caches' in window){
+        const keys=await caches.keys();
+        await Promise.all(keys.filter(k=>k.startsWith('urbanskyline-')).map(k=>caches.delete(k)));
+      }
+    }catch(e){}
+    const u=new URL(location.href); u.searchParams.set('updated',Date.now()); location.replace(u.toString());
+  }
+  window.addEventListener('load', async () => {
+    if('serviceWorker' in navigator){
+      try{
+        const reg=await navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'});
+        reg.addEventListener('updatefound',()=>{ const w=reg.installing; if(w) w.addEventListener('statechange',()=>{ if(w.state==='installed' && navigator.serviceWorker.controller) checkForUrbanSkyLineUpdate(); }); });
+      }catch(e){}
+    }
+    document.getElementById('updateAppBtn')?.addEventListener('click',applyUrbanSkyLineUpdate);
+    document.getElementById('dismissUpdateBtn')?.addEventListener('click',()=>{ const b=banner(); if(b){ sessionStorage.setItem('uslDismissedUpdate',b.dataset.version||''); b.hidden=true; } });
+    setTimeout(checkForUrbanSkyLineUpdate,1500);
+    document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible') checkForUrbanSkyLineUpdate(); });
+  });
+})();

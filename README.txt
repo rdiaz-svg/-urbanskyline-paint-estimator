@@ -1,14 +1,19 @@
-UrbanSkyLine Paint Estimator — V6.5
+UrbanSkyLine Paint Estimator — V6.8 Automatic App Updates
 
-V6.5 updates:
-- Adjustable target margin per estimate: 20%, 25%, 30%, 35%, 40%, or Custom (20–89%).
-- 40% remains the default for new projects.
-- Margin changes only the cost-based margin floor/final sale calculation; Direct Cost, painter payout, materials, repairs, supplies, and production assumptions do not change.
-- Mobile address-autocomplete setup improved. Each browser/device has its own local storage, so the Apps Script /exec connection must exist on that device.
-- New “Share Mobile Setup Link” transfers the configured Apps Script connection to an iPhone/iPad. Open the shared link once on the other device; the app saves the connection locally and removes it from the visible URL.
-- Address field now shows connection/search status and clearer errors instead of failing silently.
-- Cache keys and visible build updated to V6.5.
+NEW IN V6.8
+- Installed iPhone/iPad/desktop PWA checks version.json for newer releases.
+- Shows a "New Version Available" banner with an Update App button.
+- Update refreshes app shell/cache and reloads the newest GitHub Pages build.
+- Existing project/settings data in localStorage is intentionally preserved.
+- Current version remains visible as V6.8.
+- Embedded Google Apps Script backend from V6.7 remains unchanged.
 
-IMPORTANT: The Mobile Setup Link contains the Apps Script deployment URL. Treat it as an internal setup link and share it only with devices/users you want using this estimator. It does not contain the Google Maps API key; that key remains in Apps Script properties.
+PUBLISHING FUTURE VERSIONS
+1. Increase the visible version in index.html.
+2. Increase version/build in version.json.
+3. Change CACHE_NAME and asset query versions in sw.js/index.html.
+4. Commit all changed files together to GitHub Pages.
+Users running the Home Screen app will be offered the update after GitHub Pages serves the new version.
 
-All V6.4 subcontractor work-order/payout and V6.3 Full Room scope logic are retained.
+NOTE
+The update system refreshes application files; it does not erase localStorage. Photos/projects that exist only on one device remain device-local until cloud persistence is added.
