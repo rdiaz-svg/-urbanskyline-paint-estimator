@@ -1,15 +1,19 @@
-UrbanSkyLine Paint Estimator — v3 Section 2.2
+UrbanSkyLine Paint Estimator — V3 Section 3 Production & Subcontractor Payout
 
-Fixes:
-- Removes the old Custom = 75% room-price shortcut.
-- Prices actual selected components using each room's existing Dallas full-room target as the calibration basis.
-- 10% of the room target is setup/cleanup; 90% is allocated by production hours across walls, ceiling, baseboards, doors, and windows.
-- Closet walls and crown molding use the same room-implied production rate as extras.
-- Project price is the highest of component market price, 40% gross-margin floor, or $250 minimum job charge, rounded up to nearest $5.
-- Proposal now shows customer-readable quantities such as “1 interior door” instead of “0 SF”.
-- Technical trim-equivalent SF remains internal only.
+New labor engine:
+- 1 painter = $300 per 8-hour day = $37.50/hour
+- Exact painter-hours are used for payout; no per-room/full-day rounding
+- Job-level setup/cleanup = 15% of production hours
+- Two-coat production assumptions:
+  Walls: 210 SF/hr first coat + 280 SF/hr second coat
+  Ceilings: 175 SF/hr first + 233 SF/hr second
+  Baseboards: 80 LF/hr first + 240 LF/hr second
+  Crown: 50 LF/hr first + 75 LF/hr second
+  Interior door: 1.0 hr both sides; 0.5 hr one side
+  Door casing: 0.5 hr/opening when selected
+  Window trim: 1.25 hr/window
+- Subcontractor payout = total painter-hours x $37.50
+- Direct cost now uses estimated subcontractor payout + estimated materials
+- Customer proposal never displays subcontractor payout
 
-Current cost assumptions retained from v2/v3 for now:
-- $48 per paint gallon
-- $28 labor cost per estimated hour
-These should be replaced with final supplier and subcontractor cost data in the pricing section.
+Note: Material price remains the temporary $48/gallon assumption until the material-pricing section is calibrated.
