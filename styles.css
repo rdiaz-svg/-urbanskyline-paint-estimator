@@ -2,7 +2,7 @@
 #addressSuggestions{background:#fff;border-radius:10px;box-shadow:0 8px 20px rgba(0,0,0,.15)}#addressSuggestions button{display:block;width:100%;padding:12px;border:0;border-bottom:1px solid #ddd;background:#fff;text-align:left;font-size:15px}
 
 .sync-status{margin-top:12px;padding:12px 14px;border-radius:10px;background:#eef3f8;border:1px solid #cfd9e4;font-weight:700;min-height:20px}
-.sync-status[data-kind="success"]{background:#eaf7ee;border-color:#a8d5b5;color:#175c2b}
-.sync-status[data-kind="error"]{background:#fff0f0;border-color:#e4aaaa;color:#8f1d1d}
-.sync-status[data-kind="working"]{background:#fff8e6;border-color:#e8d39a;color:#6e5300}
+.sync-status.success{background:#eaf7ee;border-color:#a8d5b5;color:#175c2b}
+.sync-status.error{background:#fff0f0;border-color:#e4aaaa;color:#8f1d1d}
+.sync-status.working{background:#fff8e6;border-color:#e8d39a;color:#6e5300}
 #testSync:disabled,#pullSheet:disabled,#pushSheet:disabled{opacity:.65}

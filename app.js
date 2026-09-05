@@ -1,33 +1,5 @@
-
-function uslSetStatus(message, kind="info"){
-  const el=$("syncMessage");
-  if(!el) return;
-  el.textContent=message;
-  el.dataset.kind=kind;
-}
-
 const USL_SYNC={url:localStorage.getItem("uslSyncUrl")||""};
-async function uslApi(action,payload={}){
-  const u=($("syncUrl")?.value||USL_SYNC.url||"").trim();
-  if(!u) throw Error("Add the Apps Script Web App URL first.");
-  if(!u.endsWith("/exec")) throw Error("Web App URL must end in /exec.");
-  localStorage.setItem("uslSyncUrl",u);
-  USL_SYNC.url=u;
-  const r=await fetch(u,{
-    method:"POST",
-    headers:{"Content-Type":"text/plain;charset=utf-8"},
-    body:JSON.stringify({action,...payload}),
-    redirect:"follow",
-    cache:"no-store"
-  });
-  const text=await r.text();
-  let d;
-  try{ d=JSON.parse(text); }
-  catch(_){ throw Error("Apps Script returned non-JSON: "+text.slice(0,120)); }
-  if(!r.ok) throw Error("HTTP "+r.status);
-  if(d.error) throw Error(d.error);
-  return d;
-}){const u=($("syncUrl")?.value||USL_SYNC.url).trim();if(!u)throw Error("Add the Apps Script Web App URL first.");localStorage.setItem("uslSyncUrl",u);USL_SYNC.url=u;const r=await fetch(u,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action,...payload})});const d=await r.json();if(d.error)throw Error(d.error);return d}
+async function uslApi(action,payload={}){const u=($("syncUrl")?.value||USL_SYNC.url).trim();if(!u)throw Error("Add the Apps Script Web App URL first.");localStorage.setItem("uslSyncUrl",u);USL_SYNC.url=u;const r=await fetch(u,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action,...payload})});const d=await r.json();if(d.error)throw Error(d.error);return d}
 let uslAddressTimer;
 async function uslAddressSearch(q){const box=$("addressSuggestions");if(q.trim().length<4){box.innerHTML="";return}try{const d=await uslApi("addressAutocomplete",{input:q});box.innerHTML=(d.suggestions||[]).map(x=>`<button type="button" data-id="${x.placeId}">${x.text}</button>`).join("");box.querySelectorAll("button").forEach(b=>b.onclick=async()=>{const x=await uslApi("placeDetails",{placeId:b.dataset.id});$("address").value=x.street||x.formattedAddress;$("cityZip").value=[x.city,x.state,x.zip].filter(Boolean).join(" ");state.project.address=$("address").value;state.project.cityZip=$("cityZip").value;save();box.innerHTML=""})}catch(e){if($("syncMessage"))$("syncMessage").textContent=e.message}}
 const ROOM_PRESETS=[["Living Room",16,20,9,1450],["Master Bedroom",14,18,9,1250],["Bedroom 1",11,12,9,950],["Bedroom 2",11,13,9,950],["Bedroom 3",11,12,9,950],["Bedroom 4",11,12,9,950],["Kitchen",12,16,9,1050],["Dining Room",12,14,9,1050],["Office / Study",10,12,9,900],["Laundry Room",7,9,9,600],["Hallway / Stairs",8,12,9,900],["Entry / Foyer",8,10,9,800],["Game / Media Room",14,16,9,1200],["Custom Room 1",10,10,9,900],["Custom Room 2",10,10,9,900],["Garage",24,24,9,1800]];
@@ -46,6 +18,7 @@ const syncInput=$("syncUrl");
 if(syncInput) syncInput.value=USL_SYNC.url;
 
 $("testSync")?.addEventListener("click",async()=>{
+  const msg=$("syncMessage");
   const btn=$("testSync");
   try{
     const u=($("syncUrl")?.value||USL_SYNC.url||"").trim();
@@ -53,53 +26,52 @@ $("testSync")?.addEventListener("click",async()=>{
     if(!u.endsWith("/exec")) throw Error("Web App URL must end in /exec.");
     localStorage.setItem("uslSyncUrl",u);
     USL_SYNC.url=u;
+    if(msg){msg.textContent="Testing connection...";msg.className="sync-status working";}
     if(btn){btn.disabled=true;btn.textContent="Testing...";}
-    uslSetStatus("Testing connection...","working");
     const r=await fetch(u,{method:"GET",cache:"no-store",redirect:"follow"});
     const text=await r.text();
     let d;
-    try{ d=JSON.parse(text); }
-    catch(_){ throw Error("Apps Script returned non-JSON: "+text.slice(0,120)); }
+    try{d=JSON.parse(text)}catch(_){throw Error("Non-JSON response from Apps Script.");}
     if(!r.ok) throw Error("HTTP "+r.status);
     if(d.error) throw Error(d.error);
-    uslSetStatus(d.message||"Connected to UrbanSkyLine Google Sheet.","success");
+    if(msg){msg.textContent=d.message||"Connected to UrbanSkyLine Google Sheet.";msg.className="sync-status success";}
   }catch(e){
-    uslSetStatus("TEST FAILED: "+(e.message||e),"error");
+    if(msg){msg.textContent="TEST FAILED: "+(e.message||e);msg.className="sync-status error";}
   }finally{
     if(btn){btn.disabled=false;btn.textContent="Test";}
   }
 });
 
 $("pullSheet")?.addEventListener("click",async()=>{
-  const btn=$("pullSheet");
+  const msg=$("syncMessage"),btn=$("pullSheet");
   try{
+    if(msg){msg.textContent="Loading current estimate from Google Sheet...";msg.className="sync-status working";}
     if(btn){btn.disabled=true;btn.textContent="Loading...";}
-    uslSetStatus("Loading current estimate from Google Sheet...","working");
     const d=await uslApi("loadEstimate");
-    if(!d.state) throw Error("No state was returned by Apps Script.");
+    if(!d.state) throw Error("No estimate data returned.");
     state=d.state;
     save();
     bindProject();
     renderRooms();
     renderColors();
     refreshAll();
-    uslSetStatus("Loaded current estimate from Google Sheet.","success");
+    if(msg){msg.textContent="Loaded current estimate from Google Sheet.";msg.className="sync-status success";}
   }catch(e){
-    uslSetStatus("LOAD FAILED: "+(e.message||e),"error");
+    if(msg){msg.textContent="LOAD FAILED: "+(e.message||e);msg.className="sync-status error";}
   }finally{
     if(btn){btn.disabled=false;btn.textContent="Load Sheet";}
   }
 });
 
 $("pushSheet")?.addEventListener("click",async()=>{
-  const btn=$("pushSheet");
+  const msg=$("syncMessage"),btn=$("pushSheet");
   try{
+    if(msg){msg.textContent="Saving current estimate to Google Sheet...";msg.className="sync-status working";}
     if(btn){btn.disabled=true;btn.textContent="Saving...";}
-    uslSetStatus("Saving current estimate to Google Sheet...","working");
     await uslApi("saveEstimate",{state});
-    uslSetStatus("Saved current estimate to Google Sheet.","success");
+    if(msg){msg.textContent="Saved current estimate to Google Sheet.";msg.className="sync-status success";}
   }catch(e){
-    uslSetStatus("SAVE FAILED: "+(e.message||e),"error");
+    if(msg){msg.textContent="SAVE FAILED: "+(e.message||e);msg.className="sync-status error";}
   }finally{
     if(btn){btn.disabled=false;btn.textContent="Save to Sheet";}
   }
