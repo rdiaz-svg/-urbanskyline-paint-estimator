@@ -6,3 +6,5 @@
 .door-options{margin:10px 0 14px}.door-options .segmented{margin-bottom:10px}.door-options .scope-chip{width:100%;min-height:44px}
 
 .prod-detail{display:block;color:#7f6b55;font-weight:500;margin-top:3px;line-height:1.35}.production-details{margin-top:10px}.production-details .status-row span{max-width:80%}
+
+.repair-box{margin-top:14px;padding:14px;border:1px solid #dfccb0;border-radius:14px;background:#fffaf3}.repair-list{display:grid;gap:8px;margin-top:8px}.repair-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid #eadfce}.repair-row:last-child{border-bottom:0}.repair-row .qty-stepper{min-width:120px}
