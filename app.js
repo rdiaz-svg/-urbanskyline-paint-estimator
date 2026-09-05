@@ -464,6 +464,26 @@ function renderCurrentContractSummary(){
 function proposalScope(r){const q=roomQty(r),items=[];if(include(r,'walls'))items.push('Walls');if(include(r,'ceiling'))items.push('Ceiling');if(include(r,'baseboards'))items.push(`${Math.round(q.baseLf)} LF baseboards`);if(include(r,'doors'))items.push(`${plural(q.doors,'interior door','interior doors')}, ${r.doorSides==='One Side'?'one side':'both sides'}${r.doorCasing?' + casing/trim':''}`);if(include(r,'windows'))items.push(plural(q.windows,'window','windows'));if(include(r,'closets')){const parts=[];if(r.closetWalls)parts.push('walls');if(r.closetCeiling)parts.push('ceiling');if(r.closetBaseboards)parts.push('baseboards');items.push(`${r.closetType||'Reach-in'} closet — ${parts.join(', ')}`)}if(include(r,'crown'))items.push(`${Math.round(q.crownLf)} LF crown molding`);if(r.primerMode&&r.primerMode!=='None')items.push(r.primerMode+(r.primerMode==='Full Prime'?' — '+(r.primerTarget||'Walls'):''));const rep=repairCalc(r);rep.items.forEach(x=>items.push(`${x.qty} × ${x.label}`));return items.join('<br>')||'No work selected'}
 function proposalPaint(r){const m=materialSettings(),lines=[];if(include(r,'walls')||(include(r,'closets')&&r.closetWalls))lines.push(`Walls: ${m.wallProduct} — ${r.wallColor||'Color TBD'}${r.wallSw?' ('+r.wallSw+')':''}`);if(include(r,'ceiling')||(include(r,'closets')&&r.closetCeiling))lines.push(`Ceiling: ${m.ceilingProduct} — ${r.ceilingColor||'Color TBD'}${r.ceilingSw?' ('+r.ceilingSw+')':''}`);if(include(r,'baseboards')||include(r,'doors')||include(r,'windows')||include(r,'crown')||(include(r,'closets')&&r.closetBaseboards))lines.push(`Trim: ${m.trimProduct} — ${r.trimColor||'Color TBD'}${r.trimSw?' ('+r.trimSw+')':''}`);if(r.primerMode&&r.primerMode!=='None')lines.push(`Primer: ${materialSettings().primerProduct} — ${r.primerMode}${r.primerMode==='Full Prime'?' ('+(r.primerTarget||'Walls')+')':''}`);return lines.join('<br>')}
 function renderProposal(){const c=calc(),p=state.project,hasFieldEstimate=state.rooms.some(r=>r.selected&&(+((r.repairs||{}).largeRepair)||0)>0),rows=state.rooms.filter(r=>r.selected&&scopeSummary(r)!=='None').map(r=>`<tr><td><strong>${r.name}</strong></td><td>${proposalScope(r)}</td><td>${proposalPaint(r)}</td></tr>`).join('');const fieldWarning=hasFieldEstimate?`<div class="field-estimate-warning"><strong>IMPORTANT — LARGE DRYWALL REPAIR PRICED SEPARATELY</strong><br>Large drywall repair requires a separate field estimate and is <strong>NOT included</strong> in the investment shown below.</div>`:'';const priceNote=hasFieldEstimate?`<p class="investment-scope-note"><strong>Painting scope only.</strong> Large drywall repair priced separately.</p>`:'';const courtesy=c.courtesyCredit>0?`<div class="proposal-pricing-breakdown"><div><span>Standard Investment</span><strong>${money(c.standardInvestment)}</strong></div><div class="credit"><span>Courtesy Project Credit</span><strong>−${money(c.courtesyCredit)}</strong></div><div class="final"><span>Final Investment</span><strong>${money(c.sale)}</strong></div></div>`:`<p style="font-size:28px;font-weight:800">${money(c.sale)}</p>`;$('proposalContent').innerHTML=`<div class="proposal-brand"><img src="urban-skyline-logo.png" alt="UrbanSkyLine Design & Build, LLC" class="proposal-logo"><div><h2>UrbanSkyLine Design & Build LLC</h2><p><strong>Interior Painting Proposal</strong></p></div></div><p><strong>Customer:</strong> ${p.customerName||'—'}<br><strong>Project:</strong> ${p.address||'—'} ${p.cityZip||''}<br><strong>Estimator:</strong> ${p.estimator||'—'}</p><h3>Scope of Work</h3><p>Prepare listed surfaces as needed and apply two finish coats unless specifically noted otherwise.</p><table><thead><tr><th>Room / Area</th><th>Work Included</th><th>Paint System / Color</th></tr></thead><tbody>${rows||'<tr><td colspan="3">No work selected</td></tr>'}</tbody></table>${fieldWarning}<h3>Investment</h3>${courtesy}${priceNote}<p>Estimated duration: ${c.days} day${c.days===1?'':'s'} • Estimated paint purchase: ${c.gallons} gallon${c.gallons===1?'':'s'}</p><p><strong>Notes:</strong> ${p.notes||'Standard preparation and two finish coats unless otherwise specified.'}</p>`}
+function subcontractorIncludedItems(r){
+  const q=roomQty(r),items=[];
+  if(include(r,'walls'))items.push('Walls — all walls, 2 finish coats');
+  if(include(r,'ceiling'))items.push('Ceiling — 2 finish coats');
+  if(include(r,'baseboards'))items.push(`Baseboards — ${Math.round(q.baseLf)} LF, 2 finish coats`);
+  if(include(r,'doors'))items.push(`${plural(q.doors,'Interior door','Interior doors')} — ${r.doorSides==='One Side'?'one side':'both sides'}${r.doorCasing?' + casing/trim':''}`);
+  if(include(r,'windows'))items.push(`${plural(q.windows,'Window','Windows')} — trim/casing`);
+  if(include(r,'closets')){
+    const parts=[];if(r.closetWalls)parts.push('walls');if(r.closetCeiling)parts.push('ceiling');if(r.closetBaseboards)parts.push('baseboards');
+    const type=r.closetType||'Reach-in',H=Math.max(0,+r.height||0);let dims='';
+    if(type==='Walk-in')dims=`${Math.max(2,+r.closetLength||6)}' × ${Math.max(2,+r.closetWidth||6)}' × ${H}' H`;
+    else if(type==='Reach-in')dims=`6' W × 2' D × ${H}' H`;
+    const cq=closetQty(r),baseNote=r.closetBaseboards?` · ${Math.round(cq.baseLf)} LF baseboards`:'';
+    items.push(`${type} closet — ${dims} — ${parts.join(', ')}${baseNote}`);
+  }
+  if(include(r,'crown'))items.push(`Crown molding — ${Math.round(q.crownLf)} LF`);
+  if(r.primerMode&&r.primerMode!=='None')items.push(r.primerMode==='Spot Prime'?'Spot prime as specified':`Full prime — ${r.primerTarget||'Walls'}`);
+  const rep=repairCalc(r);rep.items.forEach(x=>items.push(`${x.qty} × ${x.label}`));
+  return items;
+}
 function subcontractorExcludedItems(r){
   const items=[];
   if(!include(r,'walls'))items.push('Walls');
@@ -588,7 +608,7 @@ bindProject();bindPhotoInputs();bindMaterialSettings();bindSubcontractor();rende
 
 // V6.8 — installed PWA update manager. Project/settings data remains in localStorage.
 (() => {
-  const CURRENT_VERSION = '6.9.7';
+  const CURRENT_VERSION = '6.9.12';
   const banner = () => document.getElementById('updateBanner');
   const compareVersions = (a,b) => {
     const aa=String(a).split('.').map(Number), bb=String(b).split('.').map(Number);
