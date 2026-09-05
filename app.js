@@ -237,7 +237,7 @@ function snapshotApprovedEstimate(){
     rooms:JSON.parse(JSON.stringify(state.rooms||[])),
     colors:JSON.parse(JSON.stringify(state.colors||{})),
     pricing:JSON.parse(JSON.stringify(state.pricing||{})),
-    totals:{sale:c.sale,directCost:c.directCost,grossProfit:c.grossProfit,margin:c.margin,hours:c.hours,painterDays:c.painterDays,subcontractorPayout:c.subcontractorPayout,gallons:c.totalBuyGallons||0},
+    totals:{sale:c.sale,directCost:c.direct,grossProfit:c.profit,margin:c.margin,hours:c.hours,painterDays:c.painterDays,subcontractorPayout:c.subcontractorPayout,gallons:c.gallons||0},
     proposalHTML:$('proposalContent')?($('proposalContent').innerHTML||''):''
   };
 }
