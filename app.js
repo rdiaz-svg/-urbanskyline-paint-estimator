@@ -1,4 +1,4 @@
-const USL_DEFAULT_SYNC_URL="";
+const USL_DEFAULT_SYNC_URL="https://script.google.com/macros/s/AKfycbwhX9GfXUH19Hq1OxlPZ8IXnHQmiNVOz6cySrgI6Dea0kxQv9K1NoKws3XTNmZOfCc/exec";
 function validSyncUrl(u){return /^https:\/\/script\.google\.com\/macros\/s\/.+\/exec(?:\?.*)?$/i.test(String(u||"").trim())}
 (function captureMobileSetupLink(){try{const q=new URLSearchParams(location.search),api=q.get("api");if(api&&validSyncUrl(api)){localStorage.setItem("uslSyncUrl",api.trim());q.delete("api");const clean=location.pathname+(q.toString()?"?"+q.toString():"")+location.hash;history.replaceState(null,"",clean)}}catch(_){}})();
 const USL_SYNC={url:localStorage.getItem("uslSyncUrl")||USL_DEFAULT_SYNC_URL};
