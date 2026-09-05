@@ -33,4 +33,8 @@ V6.9.4 — Mandatory Change Orders
 
 V6.9.6: Guided touch-first Change Order workflow (What changed → Where → What work → Details → Review), automatic estimator pricing, existing approved room dimensions reused, internal cost details collapsed by default.
 
-V6.9.8: Change Orders support multi-select scope (e.g., Walls + Ceiling + Baseboards) with combined automatic pricing. Full Room remains a one-tap shortcut.
+V6.9.9: Change Orders support multi-select scope (e.g., Walls + Ceiling + Baseboards) with combined automatic pricing. Full Room remains a one-tap shortcut.
+
+V6.9.9: Project Mode now separates Original Approved Proposal from Current Contract Summary. Approved change orders appear separately and the current contract total is customer-facing without rewriting the original proposal.
+
+V6.9.10: 40% is the standard UrbanSkyLine target margin. Estimates priced below 40% automatically show the customer-facing difference as a Courtesy Project Credit, while internal cost/margin data remains private. Includes V6.9.9 Current Contract Summary.
