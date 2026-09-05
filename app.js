@@ -134,13 +134,22 @@ function calc(){
   });
   let primerGallons=0,primerCost=0;Object.values(primerGroups).forEach(g=>{g.baseGal=g.sf/COVERAGE_DEFAULT;g.calcGal=g.baseGal*(1+PRICING.wastePct);g.buyGal=g.spotRooms+Math.ceil(g.calcGal-1e-9);g.unitCost=+materialSettings().primerCost;g.extCost=g.buyGal*g.unitCost;primerGallons+=g.buyGal;primerCost+=g.extCost;});gallons+=primerGallons;
   const finishPaintCost=Object.values(groups).reduce((sum,g)=>sum+g.extCost,0);const paintCost=finishPaintCost+primerCost;
-  const suppliesCost=paintCost*(materialSettings().suppliesPct/100);
+  // UrbanSkyLine normal consumables allowance, based on total project painter-hours.
+  // Small: <=8 hr $50 | Medium: <=24 hr $100 | Large: <=40 hr $150 | Very large: >40 hr $200.
+  // Major repairs and specialty materials remain separate extras.
+  let suppliesTier='None', suppliesCost=0;
+  if(hours>0){
+    if(hours<=8){suppliesTier='Small';suppliesCost=50;}
+    else if(hours<=24){suppliesTier='Medium';suppliesCost=100;}
+    else if(hours<=40){suppliesTier='Large';suppliesCost=150;}
+    else{suppliesTier='Very Large';suppliesCost=200;}
+  }
   const materialCost=paintCost+suppliesCost,laborCost=subcontractorPayout,direct=materialCost+laborCost;
   const marginFloor=direct/(1-PRICING.targetMargin);
   const hasWork=state.rooms.some(r=>r.selected&&scopeSummary(r)!=='None');
   let sale=hasWork?Math.max(marketSale,marginFloor,PRICING.minimumJob):0;
   sale=Math.ceil(sale/5)*5;
-  return{sale,direct,profit:sale-direct,margin:sale?(sale-direct)/sale:0,hours,productionHours,setupCleanupHours,painterDays,painterHourly,subcontractorPayout,days:hours?Math.ceil(painterDays):0,gallons,groups:Object.values(groups),primerGroups:Object.values(primerGroups),primerGallons,primerCost,roomBreakdown,selected:state.rooms.filter(r=>r.selected&&scopeSummary(r)!=='None').length,marketSale,marginFloor,minimumJob:hasWork?PRICING.minimumJob:0,materialCost,paintCost,suppliesCost,laborCost};
+  return{sale,direct,profit:sale-direct,margin:sale?(sale-direct)/sale:0,hours,productionHours,setupCleanupHours,painterDays,painterHourly,subcontractorPayout,days:hours?Math.ceil(painterDays):0,gallons,groups:Object.values(groups),primerGroups:Object.values(primerGroups),primerGallons,primerCost,roomBreakdown,selected:state.rooms.filter(r=>r.selected&&scopeSummary(r)!=='None').length,marketSale,marginFloor,minimumJob:hasWork?PRICING.minimumJob:0,materialCost,paintCost,suppliesCost,suppliesTier,laborCost};
 }
 function refreshAll(){
   const c=calc(),p=state.project;
@@ -160,7 +169,7 @@ function refreshAll(){
   if($('painterDayRate'))$('painterDayRate').textContent=money(PRICING.painterDayRate);
   if($('painterHourlyRate'))$('painterHourlyRate').textContent=money2(c.painterHourly)+'/hr';
   if($('subcontractorPayout'))$('subcontractorPayout').textContent=money(c.subcontractorPayout);
-  if($('materialCostInternal'))$('materialCostInternal').textContent=money2(c.materialCost); if($('paintCostInternal'))$('paintCostInternal').textContent=money2(c.paintCost); if($('suppliesCostInternal'))$('suppliesCostInternal').textContent=money2(c.suppliesCost);
+  if($('materialCostInternal'))$('materialCostInternal').textContent=money2(c.materialCost); if($('paintCostInternal'))$('paintCostInternal').textContent=money2(c.paintCost); if($('suppliesCostInternal'))$('suppliesCostInternal').textContent=money2(c.suppliesCost); if($('suppliesTierInternal'))$('suppliesTierInternal').textContent=c.suppliesTier;
   if($('productionBreakdown'))$('productionBreakdown').innerHTML=c.roomBreakdown.length?c.roomBreakdown.map(r=>`<div class="status-row"><span>${r.name}<small class="prod-detail">Walls ${r.walls.toFixed(1)} • Ceiling ${r.ceiling.toFixed(1)} • Base ${r.baseboards.toFixed(1)} • Doors ${r.doors.toFixed(1)} • Windows ${r.windows.toFixed(1)}${r.closets?` • Closet ${r.closets.toFixed(1)}`:''}${r.crown?` • Crown ${r.crown.toFixed(1)}`:''}${r.primer?` • Primer ${r.primer.toFixed(1)}`:''}</small></span><strong>${r.total.toFixed(1)} hr</strong></div>`).join(''):'<p class="muted">Select rooms to see production hours.</p>';
 }
 [['applyWalls','wall'],['applyCeilings','ceiling'],['applyTrim','trim']].forEach(([id,k])=>{$(id).onclick=()=>{const color=$(k==='wall'?'defaultWallColor':k==='ceiling'?'defaultCeilingColor':'defaultTrimColor').value,sw=$(k==='wall'?'defaultWallSw':k==='ceiling'?'defaultCeilingSw':'defaultTrimSw').value;state.rooms.filter(r=>r.selected).forEach(r=>{r[k+'Color']=color;r[k+'Sw']=sw});save();renderColors()}});
