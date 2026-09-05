@@ -17,3 +17,14 @@ V6.9.2 — Project Mode header fix
 - Quick Status switches to the approved snapshot while in Project Mode.
 - Estimate Workflow is relabeled Approved Estimate Reference with a LOCKED REFERENCE badge.
 - Estimate Mode remains unchanged.
+
+
+V6.9.4 — Mandatory Change Orders
+- Approved estimate snapshot remains locked.
+- Rooms, Colors, Estimate and Material Cost editing are blocked after approval.
+- Any post-approval scope or price change must use Change Orders.
+- Change orders support additions/deductions, customer price, estimated direct cost and painter hours.
+- Draft change orders do not affect the contract.
+- Approved change orders update Current Contract Total while preserving Original Approved Contract.
+- Change order records are stored with local Project History state.
+- Customer signatures will be added in the signature release.

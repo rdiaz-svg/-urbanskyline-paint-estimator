@@ -59,3 +59,10 @@
 .section-kicker-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px}
 .section-kicker-row .section-kicker{margin-top:0}
 .reference-chip{font-size:10px;font-weight:800;letter-spacing:.08em;border:1px solid rgba(126,82,34,.28);background:#f1e5cd;color:#6b4218;border-radius:999px;padding:6px 9px;white-space:nowrap}
+
+.workflow-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}.history-item{width:100%;display:flex;justify-content:space-between;gap:16px;align-items:center;text-align:left;background:#fffaf3;border:1px solid #dfcfb5;border-radius:14px;padding:16px;margin:10px 0;color:inherit}.history-item span{display:flex;flex-direction:column;gap:4px}.history-item span:last-child{text-align:right}.history-item small{color:#80684e}.history-item strong{font-size:16px}@media(max-width:600px){.workflow-actions{grid-template-columns:1fr}.history-item{align-items:flex-start}.history-item span:last-child{min-width:90px}}
+
+/* V6.9.4 — Mandatory post-approval Change Orders */
+.change-order-item{border:1px solid #dfcfb5;border-radius:14px;padding:15px;margin:12px 0;background:#fffaf3}
+.co-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:8px}.co-head>div{display:flex;flex-direction:column;gap:3px}.co-head small{color:#80684e}.co-status{font-size:10px;font-weight:900;letter-spacing:.08em;border-radius:999px;padding:6px 9px}.co-status.approved{background:#e3efe4;color:#315b36}.co-status.draft{background:#f1e5cd;color:#6b4218}.contract-current{font-size:18px;border-top:2px solid #d7c4a4}.contract-current strong{font-size:20px}.co-execution-summary .primary{margin-top:10px}
+@media(max-width:600px){.co-head{align-items:center}}
