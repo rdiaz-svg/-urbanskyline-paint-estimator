@@ -14,25 +14,19 @@ function refreshAll(){const c=calc(),p=state.project;$('homeProjectLabel').textC
 [['applyWalls','wall'],['applyCeilings','ceiling'],['applyTrim','trim']].forEach(([id,k])=>{$(id).onclick=()=>{const color=$(k==='wall'?'defaultWallColor':k==='ceiling'?'defaultCeilingColor':'defaultTrimColor').value,sw=$(k==='wall'?'defaultWallSw':k==='ceiling'?'defaultCeilingSw':'defaultTrimSw').value;state.rooms.filter(r=>r.selected).forEach(r=>{r[k+'Color']=color;r[k+'Sw']=sw});save();renderColors()}});
 $('newProjectBtn').onclick=()=>{if(confirm('Start a new estimate? This clears the current project on this device.')){state=fresh();save();bindProject();renderRooms();renderColors()}};$('printProposal').onclick=()=>window.print();function renderProposal(){const c=calc(),p=state.project,rows=state.rooms.filter(r=>r.selected).map(r=>`<tr><td>${r.name}</td><td>${r.package}</td><td>${include(r,'ceiling')?'Yes':'No'}</td><td>${include(r,'trim')?'Yes':'No'}</td></tr>`).join('');$('proposalContent').innerHTML=`<h2>UrbanSkyLine Design & Build LLC</h2><p><strong>Interior Painting Proposal</strong></p><p><strong>Customer:</strong> ${p.customerName||'—'}<br><strong>Project:</strong> ${p.address||'—'} ${p.cityZip||''}<br><strong>Estimator:</strong> ${p.estimator||'—'}</p><h3>Scope</h3><table><thead><tr><th>Room</th><th>Package</th><th>Ceiling</th><th>Trim</th></tr></thead><tbody>${rows||'<tr><td colspan="4">No rooms selected</td></tr>'}</tbody></table><h3>Investment</h3><p style="font-size:28px;font-weight:800">${money(c.sale)}</p><p>Estimated duration: ${c.days} day${c.days===1?'':'s'} • Estimated paint purchase: ${c.gallons} gallon${c.gallons===1?'':'s'}</p><p><strong>Notes:</strong> ${p.notes||'Standard preparation and two finish coats unless otherwise specified.'}</p>`}
 let deferredPrompt;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;$('installBtn').hidden=false});$('installBtn').onclick=async()=>{if(deferredPrompt){deferredPrompt.prompt();deferredPrompt=null;$('installBtn').hidden=true}};
-const syncInput=$("syncUrl");
-if(syncInput) syncInput.value=USL_SYNC.url;
 
-$("testSync")?.addEventListener("click",async()=>{
-  const msg=$("syncMessage");
-  const btn=$("testSync");
+window.uslTestConnection=async function(){
+  const msg=$("syncMessage"), btn=$("testSync");
   try{
     const u=($("syncUrl")?.value||USL_SYNC.url||"").trim();
     if(!u) throw Error("Web App URL is empty.");
     if(!u.endsWith("/exec")) throw Error("Web App URL must end in /exec.");
-    localStorage.setItem("uslSyncUrl",u);
-    USL_SYNC.url=u;
+    localStorage.setItem("uslSyncUrl",u); USL_SYNC.url=u;
     if(msg){msg.textContent="Testing connection...";msg.className="sync-status working";}
     if(btn){btn.disabled=true;btn.textContent="Testing...";}
-    const r=await fetch(u,{method:"GET",cache:"no-store",redirect:"follow"});
+    const r=await fetch(u+"?t="+Date.now(),{method:"GET",cache:"no-store",redirect:"follow"});
     const text=await r.text();
-    let d;
-    try{d=JSON.parse(text)}catch(_){throw Error("Non-JSON response from Apps Script.");}
-    if(!r.ok) throw Error("HTTP "+r.status);
+    let d; try{d=JSON.parse(text)}catch(_){throw Error("Apps Script returned non-JSON.");}
     if(d.error) throw Error(d.error);
     if(msg){msg.textContent=d.message||"Connected to UrbanSkyLine Google Sheet.";msg.className="sync-status success";}
   }catch(e){
@@ -40,31 +34,26 @@ $("testSync")?.addEventListener("click",async()=>{
   }finally{
     if(btn){btn.disabled=false;btn.textContent="Test";}
   }
-});
+};
 
-$("pullSheet")?.addEventListener("click",async()=>{
-  const msg=$("syncMessage"),btn=$("pullSheet");
+window.uslLoadSheet=async function(){
+  const msg=$("syncMessage"), btn=$("pullSheet");
   try{
     if(msg){msg.textContent="Loading current estimate from Google Sheet...";msg.className="sync-status working";}
     if(btn){btn.disabled=true;btn.textContent="Loading...";}
     const d=await uslApi("loadEstimate");
     if(!d.state) throw Error("No estimate data returned.");
-    state=d.state;
-    save();
-    bindProject();
-    renderRooms();
-    renderColors();
-    refreshAll();
+    state=d.state; save(); bindProject(); renderRooms(); renderColors(); refreshAll();
     if(msg){msg.textContent="Loaded current estimate from Google Sheet.";msg.className="sync-status success";}
   }catch(e){
     if(msg){msg.textContent="LOAD FAILED: "+(e.message||e);msg.className="sync-status error";}
   }finally{
     if(btn){btn.disabled=false;btn.textContent="Load Sheet";}
   }
-});
+};
 
-$("pushSheet")?.addEventListener("click",async()=>{
-  const msg=$("syncMessage"),btn=$("pushSheet");
+window.uslSaveSheet=async function(){
+  const msg=$("syncMessage"), btn=$("pushSheet");
   try{
     if(msg){msg.textContent="Saving current estimate to Google Sheet...";msg.className="sync-status working";}
     if(btn){btn.disabled=true;btn.textContent="Saving...";}
@@ -75,6 +64,13 @@ $("pushSheet")?.addEventListener("click",async()=>{
   }finally{
     if(btn){btn.disabled=false;btn.textContent="Save to Sheet";}
   }
+};
+
+const syncInput=$("syncUrl");
+if(syncInput) syncInput.value=USL_SYNC.url;
+$("address")?.addEventListener("input",e=>{
+  clearTimeout(uslAddressTimer);
+  uslAddressTimer=setTimeout(()=>uslAddressSearch(e.target.value),350);
 });
 
-if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js');bindProject();renderRooms();renderColors();refreshAll();
+bindProject();renderRooms();renderColors();refreshAll();

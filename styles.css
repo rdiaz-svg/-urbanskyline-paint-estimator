@@ -6,3 +6,7 @@
 .sync-status.error{background:#fff0f0;border-color:#e4aaaa;color:#8f1d1d}
 .sync-status.working{background:#fff8e6;border-color:#e8d39a;color:#6e5300}
 #testSync:disabled,#pullSheet:disabled,#pushSheet:disabled{opacity:.65}
+
+#addressSuggestions{background:#fff;border-radius:10px;box-shadow:0 8px 20px rgba(0,0,0,.15);position:relative;z-index:50}
+#addressSuggestions:empty{display:none}
+#addressSuggestions button{display:block;width:100%;padding:12px;border:0;border-bottom:1px solid #ddd;background:#fff;text-align:left;font-size:15px}
