@@ -67,3 +67,13 @@ V7.1.1 IPAD INPUT UX + BATHROOM PRESETS
 - Bathroom presets use the same Walls / Ceiling / Baseboards / Doors / Windows / Crown / Custom scope engine and can be adjusted in the field.
 - Adds explicit native input types, autocomplete, inputmode, and enter-key hints to Project and signature fields for cleaner iPad/iPhone text-entry behavior.
 - iPadOS controls whether its keyboard is full-size or floating; a PWA cannot force that OS-level keyboard mode.
+
+V7.2 — Cabinet Painting Module
+- Specialized cabinet scopes: Kitchen Cabinets, Bathroom Vanity, Laundry Cabinets, Built-ins, Custom Cabinets.
+- Guided counts for doors, drawer fronts, cabinet boxes/frames (LF), end panels, and optional interior surfaces.
+- Prep condition, hardware removal/reinstall, optional wood-grain filling.
+- Cabinet production hours, primer and finish gallons, actual contractor material cost, Direct Cost and target-margin pricing.
+- Uses ProBlock primer + Emerald Urethane Trim Enamel as the default cabinet coating system.
+- Cabinet scope appears on Customer Proposal, approved snapshot/current contract, and Current Subcontractor Work Order.
+- Cabinet Painting is available in Change Orders with automatic pricing.
+- 40% remains the standard UrbanSkyLine target margin; lower estimate margins continue to create Courtesy Project Credit.
