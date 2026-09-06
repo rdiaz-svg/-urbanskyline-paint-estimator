@@ -43,3 +43,11 @@ V6.9.14 Project Mode Quick Status
 - Project Mode Quick Status now uses original approved scope plus approved Change Orders.
 - Shows Authorized areas, Current paint gallons, Current painter-days, and Current contract.
 - Gross margin is removed from Project Mode Home status; Estimate Mode keeps its original estimate metrics.
+
+V7.0 TOUCH SIGNATURES
+- Original Proposal: customer signs with finger/Apple Pencil before Estimate converts to Project Mode.
+- Change Orders: approval requires customer signature; Draft orders do not affect the contract total.
+- Subcontractor Work Order: separate acknowledgment signature with printed name/date-time.
+- Signed original proposal and approved Change Orders remain locked in local Project History.
+- Customer signatures appear on customer contract records; subcontractor signature remains internal.
+- Existing legacy approved projects/change orders remain usable and are labeled as legacy when no signature was captured.
