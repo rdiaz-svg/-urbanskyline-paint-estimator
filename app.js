@@ -767,50 +767,50 @@ function blobToDataUrl(blob){return new Promise((resolve,reject)=>{const fr=new 
 async function exportCloudPhotos(){const photos=await getProjectPhotos();const out=[];for(const p of photos){out.push({id:p.id,projectId:p.projectId,created:p.created,name:p.name||'Job photo',dataUrl:await blobToDataUrl(p.blob)})}return out}
 function dataUrlToBlob(dataUrl){const parts=String(dataUrl||'').split(','),meta=parts[0]||'',bin=atob(parts[1]||''),m=/data:([^;]+)/.exec(meta),u8=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u8[i]=bin.charCodeAt(i);return new Blob([u8],{type:m?m[1]:'image/jpeg'})}
 async function replaceProjectPhotosFromCloud(items){if(!Array.isArray(items))return;const db=await photoDb();await new Promise((resolve,reject)=>{const tx=db.transaction(PHOTO_STORE,'readwrite'),st=tx.objectStore(PHOTO_STORE),idx=st.index('projectId'),r=idx.openCursor(IDBKeyRange.only(state.project.photoProjectId));r.onsuccess=()=>{const c=r.result;if(c){c.delete();c.continue()}};tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)});for(const p of items){if(!p.dataUrl)continue;await addPhotoRecord({id:p.id||('ph_'+Date.now()+'_'+Math.random().toString(36).slice(2)),projectId:state.project.photoProjectId,created:p.created||Date.now(),name:p.name||'Cloud photo',blob:dataUrlToBlob(p.dataUrl)})}}
-window.uslCloudBackup=async function(){const msg=$("syncMessage"),btn=$("pushSheet");try{if(msg){msg.textContent='Preparing complete cloud backup…';msg.className='sync-status working'}if(btn){btn.disabled=true;btn.textContent='Backing Up…'}if(state.workflow?.mode==='project'&&state.workflow?.approvedSnapshot)archiveCurrentProject();const photos=await exportCloudPhotos();const payload={schemaVersion:1,appVersion:'7.3.4',savedAt:new Date().toISOString(),state:stateForArchive(state),history:loadHistory(),photos};const d=await uslApi('cloudBackup',{backup:payload});if(msg){msg.textContent=`Cloud backup complete${d.savedAt?' · '+new Date(d.savedAt).toLocaleString():''}. ${photos.length} photo${photos.length===1?'':'s'} included.`;msg.className='sync-status success'}}catch(e){if(msg){msg.textContent='CLOUD BACKUP FAILED: '+(e.message||e);msg.className='sync-status error'}}finally{if(btn){btn.disabled=false;btn.textContent='Back Up Cloud'}}};
+window.uslCloudBackup=async function(){const msg=$("syncMessage"),btn=$("pushSheet");try{if(msg){msg.textContent='Preparing complete cloud backup…';msg.className='sync-status working'}if(btn){btn.disabled=true;btn.textContent='Backing Up…'}if(state.workflow?.mode==='project'&&state.workflow?.approvedSnapshot)archiveCurrentProject();const photos=await exportCloudPhotos();const payload={schemaVersion:1,appVersion:'7.3.5',savedAt:new Date().toISOString(),state:stateForArchive(state),history:loadHistory(),photos};const d=await uslApi('cloudBackup',{backup:payload});if(msg){msg.textContent=`Cloud backup complete${d.savedAt?' · '+new Date(d.savedAt).toLocaleString():''}. ${photos.length} photo${photos.length===1?'':'s'} included.`;msg.className='sync-status success'}}catch(e){if(msg){msg.textContent='CLOUD BACKUP FAILED: '+(e.message||e);msg.className='sync-status error'}}finally{if(btn){btn.disabled=false;btn.textContent='Back Up Cloud'}}};
 async function loadCloudBackupChunked(){
   const startInfo=await uslApi('cloudRestoreStart');
   if(!startInfo||!startInfo.found)return null;
   const backupId=String(startInfo.backupId||'');
   const chunkSize=Number(startInfo.chunkSize);
   const expectedSha256=String(startInfo.sha256||'').toLowerCase();
+  const serverTotal=Number(startInfo.totalChars);
   if(!backupId)throw Error('Cloud restore did not include a backup ID.');
   if(!Number.isSafeInteger(chunkSize)||chunkSize<256||chunkSize>50000)throw Error('Cloud restore returned an invalid chunk size.');
+  if(!Number.isSafeInteger(serverTotal)||serverTotal<1)throw Error('Cloud restore returned an invalid backup size.');
 
   const parts=[];
   const MAX_CHUNKS=10000;
-  let expectedIndex=0;
-  let expectedStart=0;
-  let done=false;
+  let offset=0;
+  let requests=0;
 
-  while(!done){
-    if(expectedIndex>=MAX_CHUNKS)throw Error('Cloud restore exceeded the safety chunk limit.');
-    const part=await uslApi('cloudRestoreChunk',{backupId,index:expectedIndex});
-    if(!part||typeof part.chunk!=='string')throw Error('Cloud backup chunk '+(expectedIndex+1)+' could not be read.');
+  while(true){
+    if(requests>=MAX_CHUNKS)throw Error('Cloud restore exceeded the safety chunk limit.');
+    const part=await uslApi('cloudRestoreChunkCursor',{backupId,offset});
+    requests++;
+    if(!part||typeof part.chunk!=='string')throw Error('Cloud backup data could not be read at offset '+offset+'.');
     if(String(part.backupId||'')!==backupId)throw Error('Cloud backup changed during restore. Please retry.');
-    if(Number(part.index)!==expectedIndex)throw Error('Cloud backup chunk sequence is invalid at chunk '+(expectedIndex+1)+'.');
-    if(Number(part.start)!==expectedStart)throw Error('Cloud backup chunk start is invalid at chunk '+(expectedIndex+1)+'.');
 
-    const end=Number(part.end);
-    if(!Number.isSafeInteger(end)||end<expectedStart)throw Error('Cloud backup chunk end is invalid at chunk '+(expectedIndex+1)+'.');
-    if(end-expectedStart!==part.chunk.length)throw Error('Cloud backup chunk '+(expectedIndex+1)+' length did not match its boundaries.');
-    if(part.chunk.length>chunkSize)throw Error('Cloud backup chunk '+(expectedIndex+1)+' exceeded the allowed chunk size.');
+    const start=Number(part.start),end=Number(part.end),nextOffset=Number(part.nextOffset),partTotal=Number(part.totalChars);
+    if(!Number.isSafeInteger(start)||start!==offset)throw Error('Cloud backup cursor start is invalid.');
+    if(!Number.isSafeInteger(end)||end<start)throw Error('Cloud backup cursor end is invalid.');
+    if(!Number.isSafeInteger(nextOffset)||nextOffset!==end)throw Error('Cloud backup cursor did not advance correctly.');
+    if(!Number.isSafeInteger(partTotal)||partTotal!==serverTotal)throw Error('Cloud backup size changed during restore. Please retry.');
+    if(end-start!==part.chunk.length)throw Error('Cloud backup chunk length did not match its boundaries.');
+    if(part.chunk.length>chunkSize)throw Error('Cloud backup chunk exceeded the allowed chunk size.');
 
-    done=part.done===true;
-    if(!done&&part.chunk.length!==chunkSize)throw Error('Cloud backup chunk '+(expectedIndex+1)+' ended early before the final chunk.');
-
-    parts.push(part.chunk);
-    expectedStart=end;
-    expectedIndex++;
+    const done=part.done===true;
+    if(part.chunk.length){parts.push(part.chunk);}
+    if(done){
+      if(end!==serverTotal)throw Error('Cloud restore ended before the complete backup was received.');
+      break;
+    }
+    if(end<=offset)throw Error('Cloud restore made no progress. Please retry.');
+    offset=nextOffset;
   }
 
   const txt=parts.join('');
-  if(!txt.length)throw Error('Cloud backup download was empty.');
-
-  const serverTotal=Number(startInfo.totalChars);
-  if(Number.isSafeInteger(serverTotal)&&serverTotal>0&&txt.length!==serverTotal){
-    throw Error('Cloud backup download length did not match the server total.');
-  }
+  if(txt.length!==serverTotal)throw Error('Cloud backup download length did not match the server total.');
 
   if(expectedSha256&&window.crypto?.subtle&&window.TextEncoder){
     const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(txt));
@@ -838,7 +838,7 @@ bindProject();bindPhoneFormatting();bindPhotoInputs();bindMaterialSettings();bin
 
 // V6.8 — installed PWA update manager. Project/settings data remains in localStorage.
 (() => {
-  const CURRENT_VERSION = '7.3.4';
+  const CURRENT_VERSION = '7.3.5';
   const banner = () => document.getElementById('updateBanner');
   const compareVersions = (a,b) => {
     const aa=String(a).split('.').map(Number), bb=String(b).split('.').map(Number);

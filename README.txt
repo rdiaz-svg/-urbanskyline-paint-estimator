@@ -1,11 +1,10 @@
-UrbanSkyLine Paint Estimator V7.3.4 — Streamed Pinned-File Cloud Restore
+UrbanSkyLine Paint Estimator V7.3.5 — Cursor-Based Cloud Restore
 
-Restore protocol:
-- Starts a restore session by pinning one exact Google Drive backup file ID.
-- Downloads sequential chunks until the server explicitly marks the final chunk with done:true.
-- Does not depend on a precomputed character count or chunk count to decide when to stop.
-- Validates backup ID, chunk sequence, boundaries, chunk size, optional total length, and SHA-256 before JSON restore.
-- Local project is not replaced unless the entire verified backup decodes successfully.
-- Existing keyboard fix and cloud backup behavior are unchanged.
+Fixes:
+- Replaces index-based restore chunks with server-directed cursor/offset streaming.
+- EOF is a valid terminal response; no out-of-range chunk request can fail the restore.
+- Pins restore to one Google Drive backup file ID.
+- Verifies total length and SHA-256 before parsing/restoring.
+- Keeps V7.2.5 iPad keyboard behavior and V7.3 cloud backup behavior.
 
-Backend required: UrbanSkyLine Apps Script API v3.4.
+Backend required: UrbanSkyLine Apps Script API v3.5.
