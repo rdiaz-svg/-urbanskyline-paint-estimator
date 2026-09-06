@@ -572,51 +572,6 @@ function signSubcontractorWorkOrder(){if(!isApprovedProject()){alert('Convert th
 $('signatureCanvas')?.addEventListener('pointerdown',startSignature);$('signatureCanvas')?.addEventListener('pointermove',moveSignature);$('signatureCanvas')?.addEventListener('pointerup',endSignature);$('signatureCanvas')?.addEventListener('pointercancel',endSignature);$('signatureClear')?.addEventListener('click',clearSignatureCanvas);$('signatureClose')?.addEventListener('click',closeSignatureModal);$('signatureAccept')?.addEventListener('click',acceptSignature);$('signatureModal')?.addEventListener('click',e=>{if(e.target===$('signatureModal'))closeSignatureModal();});window.addEventListener('resize',()=>{if(!$('signatureModal')?.hidden)resizeSignatureCanvas();});
 
 
-// V8.0.2 — forced cache/version refresh; preserves iPad input behavior.
-// Keep the installed app on the normal full-width editing viewport and avoid
-// focus-time viewport state carrying over from the compact keyboard layout.
-(() => {
-  const isIPad = /iPad/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-  if (!isIPad) return;
-  document.documentElement.classList.add('usl-ipad');
-  const vv = window.visualViewport;
-  const syncViewport = () => {
-    const h = vv ? Math.round(vv.height) : window.innerHeight;
-    document.documentElement.style.setProperty('--usl-visual-height', h + 'px');
-  };
-  syncViewport();
-  vv?.addEventListener('resize', syncViewport);
-  vv?.addEventListener('scroll', syncViewport);
-  window.addEventListener('orientationchange', () => setTimeout(syncViewport, 120));
-
-  const projectModes = {
-    customerName:'text', phone:'tel', email:'email', address:'text',
-    cityZip:'text', estimator:'text', notes:'text'
-  };
-  for (const [id, mode] of Object.entries(projectModes)) {
-    const el = document.getElementById(id);
-    if (el && !el.hasAttribute('inputmode')) el.setAttribute('inputmode', mode);
-  }
-  document.addEventListener('focusin', e => {
-    const el=e.target;
-    if (!(el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement)) return;
-    document.body.classList.add('usl-keyboard-active');
-    syncViewport();
-    // Re-apply the normal editing viewport after WebKit hands focus to the field.
-    requestAnimationFrame(() => { syncViewport(); el.scrollIntoView({block:'center', inline:'nearest'}); });
-  }, true);
-  document.addEventListener('focusout', e => {
-    const el=e.target;
-    if (!(el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement)) return;
-    setTimeout(() => {
-      if (!(document.activeElement instanceof HTMLInputElement) && !(document.activeElement instanceof HTMLTextAreaElement)) {
-        document.body.classList.remove('usl-keyboard-active');
-        syncViewport();
-      }
-    }, 0);
-  }, true);
-})();
-
 // V7.1.1 — iPad input UX + bathroom room presets
 // V7.1 — Email & Share signed customer documents
 function safeFileName(value){return String(value||'Customer').trim().replace(/[^a-z0-9]+/gi,'_').replace(/^_+|_+$/g,'').slice(0,60)||'Customer'}
@@ -812,58 +767,75 @@ function blobToDataUrl(blob){return new Promise((resolve,reject)=>{const fr=new 
 async function exportCloudPhotos(){const photos=await getProjectPhotos();const out=[];for(const p of photos){out.push({id:p.id,projectId:p.projectId,created:p.created,name:p.name||'Job photo',dataUrl:await blobToDataUrl(p.blob)})}return out}
 function dataUrlToBlob(dataUrl){const parts=String(dataUrl||'').split(','),meta=parts[0]||'',bin=atob(parts[1]||''),m=/data:([^;]+)/.exec(meta),u8=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u8[i]=bin.charCodeAt(i);return new Blob([u8],{type:m?m[1]:'image/jpeg'})}
 async function replaceProjectPhotosFromCloud(items){if(!Array.isArray(items))return;const db=await photoDb();await new Promise((resolve,reject)=>{const tx=db.transaction(PHOTO_STORE,'readwrite'),st=tx.objectStore(PHOTO_STORE),idx=st.index('projectId'),r=idx.openCursor(IDBKeyRange.only(state.project.photoProjectId));r.onsuccess=()=>{const c=r.result;if(c){c.delete();c.continue()}};tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)});for(const p of items){if(!p.dataUrl)continue;await addPhotoRecord({id:p.id||('ph_'+Date.now()+'_'+Math.random().toString(36).slice(2)),projectId:state.project.photoProjectId,created:p.created||Date.now(),name:p.name||'Cloud photo',blob:dataUrlToBlob(p.dataUrl)})}}
-async function sha256Text(txt){
-  if(!window.crypto?.subtle||!window.TextEncoder)throw Error('This browser does not support backup integrity verification.');
-  const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(txt));
+async function sha256Bytes(bytes){
+  if(!window.crypto?.subtle)throw Error('This browser does not support backup integrity verification.');
+  const view=bytes instanceof Uint8Array?bytes:new Uint8Array(bytes);
+  const digest=await crypto.subtle.digest('SHA-256',view);
   return [...new Uint8Array(digest)].map(b=>b.toString(16).padStart(2,'0')).join('');
 }
-function splitBackupText(txt,maxChars=9000){
-  const parts=[];let pos=0;
-  while(pos<txt.length){let end=Math.min(pos+maxChars,txt.length);if(end<txt.length){const c=txt.charCodeAt(end-1);if(c>=0xD800&&c<=0xDBFF)end--;}if(end<=pos)throw Error('Backup chunking could not advance.');parts.push(txt.slice(pos,end));pos=end;}
-  return parts;
+async function sha256Text(txt){
+  if(!window.TextEncoder)throw Error('This browser does not support UTF-8 backup encoding.');
+  return sha256Bytes(new TextEncoder().encode(txt));
 }
+function bytesToBase64Url(bytes){
+  let bin='';const step=0x8000;
+  for(let i=0;i<bytes.length;i+=step)bin+=String.fromCharCode(...bytes.subarray(i,Math.min(i+step,bytes.length)));
+  return btoa(bin).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+function base64UrlToBytes(value){
+  let s=String(value||'').replace(/-/g,'+').replace(/_/g,'/');while(s.length%4)s+='=';
+  const bin=atob(s),out=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)out[i]=bin.charCodeAt(i);return out;
+}
+function joinByteChunks(parts,total){const out=new Uint8Array(total);let pos=0;for(const part of parts){out.set(part,pos);pos+=part.length}if(pos!==total)throw Error('Restore byte assembly failed.');return out}
 window.uslCloudBackup=async function(){
   const msg=$("syncMessage"),btn=$("pushSheet");
   try{
-    if(msg){msg.textContent='Preparing verified transactional cloud backup…';msg.className='sync-status working'}
+    if(msg){msg.textContent='Preparing verified Cloud Sync 2.0 backup…';msg.className='sync-status working'}
     if(btn){btn.disabled=true;btn.textContent='Backing Up…'}
     if(state.workflow?.mode==='project'&&state.workflow?.approvedSnapshot)archiveCurrentProject();
     const photos=await exportCloudPhotos();
-    const payload={schemaVersion:2,appVersion:'8.0.2',savedAt:new Date().toISOString(),state:stateForArchive(state),history:loadHistory(),photos};
-    const txt=JSON.stringify(payload),parts=splitBackupText(txt,9000),fullSha=await sha256Text(txt);
-    const begin=await uslApi('backupV4Begin',{totalChars:txt.length,chunkCount:parts.length,sha256:fullSha,savedAt:payload.savedAt});
-    const backupId=String(begin.backupId||'');if(!backupId)throw Error('Cloud backup transaction did not return an ID.');
-    for(let i=0;i<parts.length;i++){
-      if(msg)msg.textContent=`Uploading verified backup… ${i+1} of ${parts.length}`;
-      const chunk=parts[i],chunkSha=await sha256Text(chunk);
-      const ack=await uslApi('backupV4Chunk',{backupId,index:i,chunk,sha256:chunkSha});
-      if(Number(ack.index)!==i||ack.verified!==true)throw Error('Cloud did not verify backup chunk '+(i+1)+'.');
+    const payload={schemaVersion:2,appVersion:'8.0.3',savedAt:new Date().toISOString(),state:stateForArchive(state),history:loadHistory(),photos};
+    const txt=JSON.stringify(payload),bytes=new TextEncoder().encode(txt),fullSha=await sha256Bytes(bytes);
+    const requestedChunkBytes=24000,totalChunks=Math.ceil(bytes.length/requestedChunkBytes);
+    const begin=await uslApi('cloudBackupBegin',{totalBytes:bytes.length,totalChunks,sha256:fullSha,appVersion:payload.appVersion});
+    const backupId=String(begin.backupId||''),chunkBytes=Number(begin.chunkBytes||requestedChunkBytes);
+    if(!backupId)throw Error('Cloud backup transaction did not return an ID.');
+    if(!Number.isSafeInteger(chunkBytes)||chunkBytes<1||chunkBytes>24000)throw Error('Cloud returned an invalid chunk size.');
+    const actualChunks=Math.ceil(bytes.length/chunkBytes);if(actualChunks!==Number(begin.totalChunks||totalChunks))throw Error('Cloud backup manifest chunk count mismatch.');
+    for(let i=0;i<actualChunks;i++){
+      if(msg)msg.textContent=`Uploading verified backup… ${i+1} of ${actualChunks}`;
+      const chunk=bytes.subarray(i*chunkBytes,Math.min((i+1)*chunkBytes,bytes.length)),chunkSha=await sha256Bytes(chunk);
+      const ack=await uslApi('cloudBackupChunk',{backupId,index:i,byteLength:chunk.length,sha256:chunkSha,data:bytesToBase64Url(chunk)});
+      if(Number(ack.index)!==i||ack.accepted!==true||String(ack.sha256||'').toLowerCase()!==chunkSha)throw Error('Google did not verify backup chunk '+(i+1)+'.');
     }
-    const done=await uslApi('backupV4Commit',{backupId});
-    if(done.committed!==true||String(done.sha256||'').toLowerCase()!==fullSha)throw Error('Cloud backup did not pass final integrity verification.');
-    if(msg){msg.textContent=`Verified cloud backup complete · ${new Date(done.savedAt||payload.savedAt).toLocaleString()}. ${photos.length} photo${photos.length===1?'':'s'} included.`;msg.className='sync-status success'}
+    const done=await uslApi('cloudBackupCommit',{backupId,totalBytes:bytes.length,totalChunks:actualChunks,sha256:fullSha});
+    if(done.verified!==true||String(done.sha256||'').toLowerCase()!==fullSha||Number(done.totalBytes)!==bytes.length)throw Error('Cloud backup did not pass final integrity verification.');
+    if(msg){msg.textContent=`Verified cloud backup complete · ${new Date(done.savedAt||payload.savedAt).toLocaleString()}. ${photos.length} photo${photos.length===1?'':'s'} included · ${bytes.length.toLocaleString()} bytes.`;msg.className='sync-status success'}
   }catch(e){if(msg){msg.textContent='CLOUD BACKUP FAILED — local data was not replaced: '+(e.message||e);msg.className='sync-status error'}}
   finally{if(btn){btn.disabled=false;btn.textContent='Back Up Cloud'}}
 };
-async function loadCloudBackupV4(){
-  const info=await uslApi('restoreV4Start');
+async function loadCloudBackupV5(){
+  const info=await uslApi('cloudRestoreStart');
   if(!info||info.found!==true)return null;
-  const backupId=String(info.backupId||''),count=Number(info.chunkCount),total=Number(info.totalChars),expected=String(info.sha256||'').toLowerCase();
+  const backupId=String(info.backupId||''),count=Number(info.totalChunks),total=Number(info.totalBytes),expected=String(info.sha256||'').toLowerCase();
   if(!backupId)throw Error('Restore manifest is missing its transaction ID.');
-  if(!Number.isSafeInteger(count)||count<1||count>20000)throw Error('Restore manifest has an invalid chunk count.');
-  if(!Number.isSafeInteger(total)||total<2)throw Error('Restore manifest has an invalid backup size.');
+  if(!Number.isSafeInteger(count)||count<1||count>5000)throw Error('Restore manifest has an invalid chunk count.');
+  if(!Number.isSafeInteger(total)||total<2||total>60000000)throw Error('Restore manifest has an invalid backup byte size.');
   if(!/^[a-f0-9]{64}$/.test(expected))throw Error('Restore manifest has an invalid integrity signature.');
   const parts=[];let received=0;
   for(let i=0;i<count;i++){
-    const p=await uslApi('restoreV4Chunk',{backupId,index:i});
-    if(String(p.backupId||'')!==backupId||Number(p.index)!==i||typeof p.chunk!=='string')throw Error('Restore chunk '+(i+1)+' did not match the verified transaction.');
-    const actualChunkSha=await sha256Text(p.chunk);
-    if(actualChunkSha!==String(p.sha256||'').toLowerCase())throw Error('Restore chunk '+(i+1)+' failed integrity verification.');
-    parts.push(p.chunk);received+=p.chunk.length;
+    const p=await uslApi('cloudRestoreChunk',{backupId,index:i});
+    if(String(p.backupId||'')!==backupId||Number(p.index)!==i||typeof p.data!=='string')throw Error('Restore chunk '+(i+1)+' did not match the active verified transaction.');
+    const chunk=base64UrlToBytes(p.data),declared=Number(p.byteLength),serverSha=String(p.sha256||'').toLowerCase(),actualSha=await sha256Bytes(chunk);
+    if(chunk.length!==declared)throw Error('Restore chunk '+(i+1)+' byte length verification failed.');
+    if(actualSha!==serverSha)throw Error('Restore chunk '+(i+1)+' failed SHA-256 verification.');
+    parts.push(chunk);received+=chunk.length;
+    if(received>total)throw Error('Restore received more bytes than declared by the manifest.');
   }
-  if(received!==total)throw Error(`Restore size verification failed (${received} of ${total} characters).`);
-  const txt=parts.join(''),actual=await sha256Text(txt);
+  if(received!==total)throw Error(`Restore size verification failed (${received} of ${total} bytes).`);
+  const bytes=joinByteChunks(parts,total),actual=await sha256Bytes(bytes);
   if(actual!==expected)throw Error('Complete cloud backup failed integrity verification. Local data was not changed.');
+  let txt;try{txt=new TextDecoder('utf-8',{fatal:true}).decode(bytes)}catch(_){throw Error('Verified backup is not valid UTF-8. Local data was not changed.');}
   let backup;try{backup=JSON.parse(txt)}catch(_){throw Error('Verified backup could not be decoded. Local data was not changed.');}
   if(!backup||typeof backup!=='object'||!backup.state||!backup.state.project)throw Error('Verified backup is missing required project data. Local data was not changed.');
   return backup;
@@ -872,9 +844,9 @@ window.uslCloudRestore=async function(){
   const msg=$("syncMessage"),btn=$("pullSheet");
   try{
     if(!confirm('Restore the latest VERIFIED UrbanSkyLine cloud backup on this device? Current local data will only be replaced after all integrity checks pass.'))return;
-    if(msg){msg.textContent='Downloading and verifying cloud backup…';msg.className='sync-status working'}
+    if(msg){msg.textContent='Downloading and verifying Cloud Sync 2.0 backup…';msg.className='sync-status working'}
     if(btn){btn.disabled=true;btn.textContent='Restoring…'}
-    const backup=await loadCloudBackupV4();if(!backup)throw Error('No verified V8 cloud backup exists yet. Create a new Back Up Cloud first.');
+    const backup=await loadCloudBackupV5();if(!backup)throw Error('No verified cloud backup exists yet. Create a Back Up Cloud first.');
     const restored=backup.state;
     if(!restored.project.photoProjectId)restored.project.photoProjectId='p_'+Date.now()+'_'+Math.random().toString(36).slice(2,8);
     state=restored;localStorage.setItem('uslPaintApp',JSON.stringify(state));saveHistory(Array.isArray(backup.history)?backup.history:[]);
@@ -898,7 +870,7 @@ bindProject();bindPhoneFormatting();bindPhotoInputs();bindMaterialSettings();bin
 
 // V6.8 — installed PWA update manager. Project/settings data remains in localStorage.
 (() => {
-  const CURRENT_VERSION = '8.0.2';
+  const CURRENT_VERSION = '8.0.3';
   const banner = () => document.getElementById('updateBanner');
   const compareVersions = (a,b) => {
     const aa=String(a).split('.').map(Number), bb=String(b).split('.').map(Number);
@@ -937,7 +909,7 @@ bindProject();bindPhoneFormatting();bindPhotoInputs();bindMaterialSettings();bin
   window.addEventListener('load', async () => {
     if('serviceWorker' in navigator){
       try{
-        const reg=await navigator.serviceWorker.register('./sw.js?v=802',{updateViaCache:'none'});
+        const reg=await navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'});
         reg.addEventListener('updatefound',()=>{ const w=reg.installing; if(w) w.addEventListener('statechange',()=>{ if(w.state==='installed' && navigator.serviceWorker.controller) checkForUrbanSkyLineUpdate(); }); });
       }catch(e){}
     }
