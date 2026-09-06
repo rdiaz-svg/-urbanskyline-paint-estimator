@@ -794,7 +794,7 @@ window.uslCloudBackup=async function(){
     if(btn){btn.disabled=true;btn.textContent='Backing Up…'}
     if(state.workflow?.mode==='project'&&state.workflow?.approvedSnapshot)archiveCurrentProject();
     const photos=await exportCloudPhotos();
-    const payload={schemaVersion:2,appVersion:'8.0.3',savedAt:new Date().toISOString(),state:stateForArchive(state),history:loadHistory(),photos};
+    const payload={schemaVersion:2,appVersion:'8.1.0',savedAt:new Date().toISOString(),state:stateForArchive(state),history:loadHistory(),photos};
     const txt=JSON.stringify(payload),bytes=new TextEncoder().encode(txt),fullSha=await sha256Bytes(bytes);
     const requestedChunkBytes=24000,totalChunks=Math.ceil(bytes.length/requestedChunkBytes);
     const begin=await uslApi('cloudBackupBegin',{totalBytes:bytes.length,totalChunks,sha256:fullSha,appVersion:payload.appVersion});
@@ -870,7 +870,7 @@ bindProject();bindPhoneFormatting();bindPhotoInputs();bindMaterialSettings();bin
 
 // V6.8 — installed PWA update manager. Project/settings data remains in localStorage.
 (() => {
-  const CURRENT_VERSION = '8.0.3';
+  const CURRENT_VERSION = '8.1.0';
   const banner = () => document.getElementById('updateBanner');
   const compareVersions = (a,b) => {
     const aa=String(a).split('.').map(Number), bb=String(b).split('.').map(Number);

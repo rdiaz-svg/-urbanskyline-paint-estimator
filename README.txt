@@ -1,24 +1,27 @@
-UrbanSkyLine Paint Estimator V8.0.3 — Integrity Repair
+UrbanSkyLine Paint Estimator V8.1.0 — Clean Integrity Rebuild
 
-This build is based on the V8 feature set, with regression repair anchored to the known-good V7.2.5 iPad input behavior.
+BUILD STRATEGY
+- Known-good V7.2.5 iPad Project input markup and viewport are preserved.
+- V8 Cloud Sync 2.0 is retained using the reconciled v5 protocol.
+- Google Places radius remains 50,000 m (valid maximum).
+- No custom keyboard, focus, visualViewport, scrollIntoView, or Project inputmode overrides were added.
+- New PWA identity: ?usl_pwa=810. This intentionally creates a clean installed-app context instead of inheriting the old app-specific standalone state.
 
-FIXES
-1. iPad keyboard: restores V7.2.5 native viewport/input behavior. No custom inputmode, visualViewport, focus scrolling, or keyboard CSS overrides are added.
-2. Address autocomplete: backend radius corrected from 60,000 m to Google's 50,000 m maximum.
-3. Cloud Sync 2.0: frontend now matches API v5 protocol names and byte-chunk contract exactly.
-4. Version/cache integrity: visible version, CURRENT_VERSION, version.json, asset query strings, service-worker cache name and service-worker asset list are all build 803 / V8.0.3.
+IMPORTANT IPAD INSTALL TEST
+1. Deploy all 8 GitHub files together.
+2. Deploy Apps Script v5.2 using the existing /exec URL.
+3. On iPad, open the site in Safari first and confirm Project fields + address.
+4. Remove the OLD UrbanSkyLine home-screen icon.
+5. Add the newly deployed app to Home Screen again.
+6. Open the NEW icon and test Customer Name, Email, Address, City/ZIP, Estimator and Notes.
 
-DEPLOYMENT ORDER
-A. Replace the Apps Script code with UrbanSkyLine_AppsScript_API_v5_1_IntegrityFix.gs, save, and deploy a new Web App version using the same /exec URL.
-B. Replace all 8 GitHub app files from this package together.
-C. Wait for GitHub Pages deployment. Open the app, use its update flow or fully close/reopen the installed PWA.
+This reinstall step is required for the keyboard test because the clean rebuild uses a new PWA identity. The old installed icon can preserve its own standalone application state even after website files change.
 
 QC GATES
-- JavaScript syntax check passed.
-- Project input markup matches known-good V7.2.5 field types/autocomplete behavior.
-- Viewport exactly matches known-good V7.2.5: width=device-width,initial-scale=1.
-- No stale V8.0.0/V8.0.1/V8.0.2 asset/version references.
-- No V4 cloud action names remain.
-- V5 frontend/backend action names reconciled.
-- Address radius <= 50,000 m.
-- Existing estimate/pricing logic was not intentionally modified.
+- JS syntax: pass
+- Project input markup: matches V7.2.5
+- Viewport: matches V7.2.5
+- Cloud frontend actions: v5 names only
+- Backend radius: 50,000 m
+- Version/cache references: 8.1.0 / 810 only
+- Fresh PWA manifest id/start_url: usl_pwa=810
