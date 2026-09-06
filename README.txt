@@ -1,11 +1,11 @@
-UrbanSkyLine Paint Estimator V7.3.3 — Audited Cloud Restore
+UrbanSkyLine Paint Estimator V7.3.4 — Streamed Pinned-File Cloud Restore
 
-Fixes:
-- Pins restore to the exact Google Drive backup file ID returned by metadata.
-- Metadata returns exact total character count, chunk size, chunk count, and SHA-256.
-- Each chunk is validated for file ID, index, byte/character boundaries, total length, and expected size.
-- Full reconstructed backup is validated for exact length and SHA-256 before JSON parsing.
-- Prevents restore from switching between same-named/stale Drive files during multi-request restore.
-- Preserves V7.2.5 iPad keyboard behavior and existing backup logic.
+Restore protocol:
+- Starts a restore session by pinning one exact Google Drive backup file ID.
+- Downloads sequential chunks until the server explicitly marks the final chunk with done:true.
+- Does not depend on a precomputed character count or chunk count to decide when to stop.
+- Validates backup ID, chunk sequence, boundaries, chunk size, optional total length, and SHA-256 before JSON restore.
+- Local project is not replaced unless the entire verified backup decodes successfully.
+- Existing keyboard fix and cloud backup behavior are unchanged.
 
-Backend required: UrbanSkyLine Apps Script API v3.3.
+Backend required: UrbanSkyLine Apps Script API v3.4.
