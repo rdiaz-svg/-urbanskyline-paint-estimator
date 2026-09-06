@@ -79,7 +79,7 @@ V7.2 — Cabinet Painting Module
 - 40% remains the standard UrbanSkyLine target margin; lower estimate margins continue to create Courtesy Project Credit.
 
 
-V7.2.4 iPad Keyboard Compatibility
+V7.2.5 iPad Keyboard Compatibility — corrected release metadata
 - Removed explicit inputmode and enterkeyhint overrides so iPadOS uses native keyboard selection from HTML input types.
 - Simplified viewport metadata to reduce standalone PWA keyboard/visual viewport interaction.
 - No estimator, pricing, cabinet, signature, contract, or change-order calculation changes.

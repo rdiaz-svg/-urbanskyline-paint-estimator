@@ -1,5 +1,5 @@
-const CACHE_NAME = 'urbanskyline-v7.2.4';
-const APP_SHELL = ['./','./index.html','./styles.css?v=724','./app.js?v=724','./manifest.json','./urban-skyline-logo.png'];
+const CACHE_NAME = 'urbanskyline-v7.2.5';
+const APP_SHELL = ['./','./index.html','./styles.css?v=725','./app.js?v=725','./manifest.json','./urban-skyline-logo.png'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(APP_SHELL)).then(() => self.skipWaiting()));
 });
