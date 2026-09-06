@@ -60,3 +60,10 @@ V7.1 EMAIL & SHARE SIGNED DOCUMENTS
 - Current Customer Contract now includes captured signatures for the original proposal and approved Change Orders.
 - Print / Save PDF remains available for a PDF copy.
 - Internal direct cost, margin, profit, material cost, and subcontractor payout are excluded from shared customer documents.
+
+
+V7.1.1 IPAD INPUT UX + BATHROOM PRESETS
+- Adds Master Bathroom (10 x 12 x 9), Bathroom 1 (8 x 10 x 9), Bathroom 2 (8 x 10 x 9), and Half Bath / Powder Room (5 x 6 x 9) to room presets.
+- Bathroom presets use the same Walls / Ceiling / Baseboards / Doors / Windows / Crown / Custom scope engine and can be adjusted in the field.
+- Adds explicit native input types, autocomplete, inputmode, and enter-key hints to Project and signature fields for cleaner iPad/iPhone text-entry behavior.
+- iPadOS controls whether its keyboard is full-size or floating; a PWA cannot force that OS-level keyboard mode.
