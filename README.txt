@@ -77,3 +77,9 @@ V7.2 — Cabinet Painting Module
 - Cabinet scope appears on Customer Proposal, approved snapshot/current contract, and Current Subcontractor Work Order.
 - Cabinet Painting is available in Change Orders with automatic pricing.
 - 40% remains the standard UrbanSkyLine target margin; lower estimate margins continue to create Courtesy Project Credit.
+
+
+V7.2.4 iPad Keyboard Compatibility
+- Removed explicit inputmode and enterkeyhint overrides so iPadOS uses native keyboard selection from HTML input types.
+- Simplified viewport metadata to reduce standalone PWA keyboard/visual viewport interaction.
+- No estimator, pricing, cabinet, signature, contract, or change-order calculation changes.
