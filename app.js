@@ -3,7 +3,7 @@ function validSyncUrl(u){return /^https:\/\/script\.google\.com\/macros\/s\/.+\/
 (function captureMobileSetupLink(){try{const q=new URLSearchParams(location.search),api=q.get("api");if(api&&validSyncUrl(api)){localStorage.setItem("uslSyncUrl",api.trim());q.delete("api");const clean=location.pathname+(q.toString()?"?"+q.toString():"")+location.hash;history.replaceState(null,"",clean)}}catch(_){}})();
 const USL_SYNC={url:localStorage.getItem("uslSyncUrl")||USL_DEFAULT_SYNC_URL};
 function addressConnectionMessage(text,kind="muted"){const e=$("addressHelp");if(!e)return;e.textContent=text;e.className="address-help "+kind}
-async function uslApi(action,payload={}){const u=($("syncUrl")?.value||USL_SYNC.url).trim();if(!u)throw Error("Google connection is not set up on this device.");if(!validSyncUrl(u))throw Error("Web App URL must be the Google Apps Script /exec URL.");localStorage.setItem("uslSyncUrl",u);USL_SYNC.url=u;const r=await fetch(u,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},cache:"no-store",redirect:"follow",body:JSON.stringify({action,...payload})});if(!r.ok)throw Error("Google connection returned HTTP "+r.status);const d=await r.json();if(d.error)throw Error(d.error);return d}
+async function uslApi(action,payload={}){const u=($("syncUrl")?.value||USL_SYNC.url).trim();if(!u)throw Error("Google connection is not set up on this device.");if(!validSyncUrl(u))throw Error("Web App URL must be the Google Apps Script /exec URL.");localStorage.setItem("uslSyncUrl",u);USL_SYNC.url=u;let lastErr;for(let attempt=1;attempt<=3;attempt++){try{const r=await fetch(u,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},cache:"no-store",redirect:"follow",body:JSON.stringify({action,...payload})});if(!r.ok)throw Error("Google connection returned HTTP "+r.status);const txt=await r.text();if(!txt||!txt.trim())throw Error("Google returned an empty response");let d;try{d=JSON.parse(txt)}catch(e){throw Error("Google returned an incomplete response ("+txt.length+" characters)")}if(d.error)throw Error(d.error);return d}catch(e){lastErr=e;if(attempt<3)await new Promise(res=>setTimeout(res,350*attempt));}}throw lastErr}
 let uslAddressTimer;
 async function uslAddressSearch(q){const box=$("addressSuggestions");if(q.trim().length<4){box.innerHTML="";addressConnectionMessage(USL_SYNC.url?"Type at least 4 characters for Google address suggestions.":"Address suggestions need Google connection on this device. Use Mobile Setup below once.");return}try{if(!USL_SYNC.url&&!($("syncUrl")?.value||"").trim()){box.innerHTML="";addressConnectionMessage("Address suggestions are not connected on this device. Paste the Apps Script /exec URL below once, or open a Mobile Setup Link.","warning");return}addressConnectionMessage("Searching Google addresses…","working");const d=await uslApi("addressAutocomplete",{input:q});const suggestions=d.suggestions||[];box.innerHTML=suggestions.map(x=>`<button type="button" data-id="${x.placeId}">${x.text}</button>`).join("");addressConnectionMessage(suggestions.length?"Select an address below.":"No matching addresses found.",suggestions.length?"success":"muted");box.querySelectorAll("button").forEach(b=>b.onclick=async()=>{try{const x=await uslApi("placeDetails",{placeId:b.dataset.id});$("address").value=x.street||x.formattedAddress;$("cityZip").value=[x.city,x.state,x.zip].filter(Boolean).join(" ");state.project.address=$("address").value;state.project.cityZip=$("cityZip").value;save();box.innerHTML="";addressConnectionMessage("Address selected from Google.","success")}catch(err){addressConnectionMessage("ADDRESS LOOKUP FAILED: "+(err.message||err),"error")}})}catch(e){addressConnectionMessage("ADDRESS SEARCH FAILED: "+(e.message||e),"error");if($("syncMessage"))$("syncMessage").textContent=e.message}}
 const ROOM_PRESETS=[["Living Room",16,20,9,1450],["Master Bedroom",14,18,9,1250],["Bedroom 1",11,12,9,950],["Bedroom 2",11,13,9,950],["Bedroom 3",11,12,9,950],["Bedroom 4",11,12,9,950],["Master Bathroom",10,12,9,950],["Bathroom 1",8,10,9,750],["Bathroom 2",8,10,9,750],["Half Bath / Powder Room",5,6,9,450],["Kitchen",12,16,9,1050],["Dining Room",12,14,9,1050],["Office / Study",10,12,9,900],["Laundry Room",7,9,9,600],["Hallway / Stairs",8,12,9,900],["Entry / Foyer",8,10,9,800],["Game / Media Room",14,16,9,1200],["Custom Room 1",10,10,9,900],["Custom Room 2",10,10,9,900],["Garage",24,24,9,1800]];
@@ -572,6 +572,51 @@ function signSubcontractorWorkOrder(){if(!isApprovedProject()){alert('Convert th
 $('signatureCanvas')?.addEventListener('pointerdown',startSignature);$('signatureCanvas')?.addEventListener('pointermove',moveSignature);$('signatureCanvas')?.addEventListener('pointerup',endSignature);$('signatureCanvas')?.addEventListener('pointercancel',endSignature);$('signatureClear')?.addEventListener('click',clearSignatureCanvas);$('signatureClose')?.addEventListener('click',closeSignatureModal);$('signatureAccept')?.addEventListener('click',acceptSignature);$('signatureModal')?.addEventListener('click',e=>{if(e.target===$('signatureModal'))closeSignatureModal();});window.addEventListener('resize',()=>{if(!$('signatureModal')?.hidden)resizeSignatureCanvas();});
 
 
+// V8.0.1 — iPad PWA keyboard regression stabilization.
+// Keep the installed app on the normal full-width editing viewport and avoid
+// focus-time viewport state carrying over from the compact keyboard layout.
+(() => {
+  const isIPad = /iPad/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  if (!isIPad) return;
+  document.documentElement.classList.add('usl-ipad');
+  const vv = window.visualViewport;
+  const syncViewport = () => {
+    const h = vv ? Math.round(vv.height) : window.innerHeight;
+    document.documentElement.style.setProperty('--usl-visual-height', h + 'px');
+  };
+  syncViewport();
+  vv?.addEventListener('resize', syncViewport);
+  vv?.addEventListener('scroll', syncViewport);
+  window.addEventListener('orientationchange', () => setTimeout(syncViewport, 120));
+
+  const projectModes = {
+    customerName:'text', phone:'tel', email:'email', address:'text',
+    cityZip:'text', estimator:'text', notes:'text'
+  };
+  for (const [id, mode] of Object.entries(projectModes)) {
+    const el = document.getElementById(id);
+    if (el && !el.hasAttribute('inputmode')) el.setAttribute('inputmode', mode);
+  }
+  document.addEventListener('focusin', e => {
+    const el=e.target;
+    if (!(el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement)) return;
+    document.body.classList.add('usl-keyboard-active');
+    syncViewport();
+    // Re-apply the normal editing viewport after WebKit hands focus to the field.
+    requestAnimationFrame(() => { syncViewport(); el.scrollIntoView({block:'center', inline:'nearest'}); });
+  }, true);
+  document.addEventListener('focusout', e => {
+    const el=e.target;
+    if (!(el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement)) return;
+    setTimeout(() => {
+      if (!(document.activeElement instanceof HTMLInputElement) && !(document.activeElement instanceof HTMLTextAreaElement)) {
+        document.body.classList.remove('usl-keyboard-active');
+        syncViewport();
+      }
+    }, 0);
+  }, true);
+})();
+
 // V7.1.1 — iPad input UX + bathroom room presets
 // V7.1 — Email & Share signed customer documents
 function safeFileName(value){return String(value||'Customer').trim().replace(/[^a-z0-9]+/gi,'_').replace(/^_+|_+$/g,'').slice(0,60)||'Customer'}
@@ -732,106 +777,111 @@ window.uslTestConnection=async function(){
   }
 };
 
-// V8 Cloud Sync 2.0 — clean transactional byte/chunk protocol.
-function bytesToBase64Url(bytes){
-  let bin=''; const step=0x8000;
-  for(let i=0;i<bytes.length;i+=step) bin+=String.fromCharCode(...bytes.subarray(i,i+step));
-  return btoa(bin).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
-}
-function base64UrlToBytes(value){
-  let s=String(value||'').replace(/-/g,'+').replace(/_/g,'/');
-  while(s.length%4)s+='=';
-  const bin=atob(s), out=new Uint8Array(bin.length);
-  for(let i=0;i<bin.length;i++) out[i]=bin.charCodeAt(i);
-  return out;
-}
-async function sha256HexBytes(bytes){
-  if(!window.crypto?.subtle)throw Error('This browser cannot verify cloud backup integrity.');
-  const d=await crypto.subtle.digest('SHA-256',bytes);
-  return [...new Uint8Array(d)].map(b=>b.toString(16).padStart(2,'0')).join('');
-}
+window.uslLoadSheet=async function(){
+  const msg=$("syncMessage"), btn=$("pullSheet");
+  try{
+    if(msg){msg.textContent="Loading current estimate from Google Sheet...";msg.className="sync-status working";}
+    if(btn){btn.disabled=true;btn.textContent="Loading...";}
+    const d=await uslApi("loadEstimate");
+    if(!d.state) throw Error("No estimate data returned.");
+    state=d.state; save(); bindProject(); renderRooms(); renderColors(); refreshAll();
+    if(msg){msg.textContent="Loaded current estimate from Google Sheet.";msg.className="sync-status success";}
+  }catch(e){
+    if(msg){msg.textContent="LOAD FAILED: "+(e.message||e);msg.className="sync-status error";}
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent="Load Sheet";}
+  }
+};
+
+window.uslSaveSheet=async function(){
+  const msg=$("syncMessage"), btn=$("pushSheet");
+  try{
+    if(msg){msg.textContent="Saving current estimate to Google Sheet...";msg.className="sync-status working";}
+    if(btn){btn.disabled=true;btn.textContent="Saving...";}
+    await uslApi("saveEstimate",{state});
+    if(msg){msg.textContent="Saved current estimate to Google Sheet.";msg.className="sync-status success";}
+  }catch(e){
+    if(msg){msg.textContent="SAVE FAILED: "+(e.message||e);msg.className="sync-status error";}
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent="Save to Sheet";}
+  }
+};
+
+
 function blobToDataUrl(blob){return new Promise((resolve,reject)=>{const fr=new FileReader();fr.onload=()=>resolve(fr.result);fr.onerror=()=>reject(fr.error||new Error('Could not read photo'));fr.readAsDataURL(blob)})}
 async function exportCloudPhotos(){const photos=await getProjectPhotos();const out=[];for(const p of photos){out.push({id:p.id,projectId:p.projectId,created:p.created,name:p.name||'Job photo',dataUrl:await blobToDataUrl(p.blob)})}return out}
 function dataUrlToBlob(dataUrl){const parts=String(dataUrl||'').split(','),meta=parts[0]||'',bin=atob(parts[1]||''),m=/data:([^;]+)/.exec(meta),u8=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u8[i]=bin.charCodeAt(i);return new Blob([u8],{type:m?m[1]:'image/jpeg'})}
-async function replaceProjectPhotosFromCloud(items){
-  if(!Array.isArray(items))return;
-  const db=await photoDb();
-  await new Promise((resolve,reject)=>{const tx=db.transaction(PHOTO_STORE,'readwrite'),st=tx.objectStore(PHOTO_STORE),idx=st.index('projectId'),r=idx.openCursor(IDBKeyRange.only(state.project.photoProjectId));r.onsuccess=()=>{const c=r.result;if(c){c.delete();c.continue()}};tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)});
-  for(const p of items){if(!p.dataUrl)continue;await addPhotoRecord({id:p.id||('ph_'+Date.now()+'_'+Math.random().toString(36).slice(2)),projectId:state.project.photoProjectId,created:p.created||Date.now(),name:p.name||'Cloud photo',blob:dataUrlToBlob(p.dataUrl)})}
+async function replaceProjectPhotosFromCloud(items){if(!Array.isArray(items))return;const db=await photoDb();await new Promise((resolve,reject)=>{const tx=db.transaction(PHOTO_STORE,'readwrite'),st=tx.objectStore(PHOTO_STORE),idx=st.index('projectId'),r=idx.openCursor(IDBKeyRange.only(state.project.photoProjectId));r.onsuccess=()=>{const c=r.result;if(c){c.delete();c.continue()}};tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)});for(const p of items){if(!p.dataUrl)continue;await addPhotoRecord({id:p.id||('ph_'+Date.now()+'_'+Math.random().toString(36).slice(2)),projectId:state.project.photoProjectId,created:p.created||Date.now(),name:p.name||'Cloud photo',blob:dataUrlToBlob(p.dataUrl)})}}
+async function sha256Text(txt){
+  if(!window.crypto?.subtle||!window.TextEncoder)throw Error('This browser does not support backup integrity verification.');
+  const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(txt));
+  return [...new Uint8Array(digest)].map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+function splitBackupText(txt,maxChars=9000){
+  const parts=[];let pos=0;
+  while(pos<txt.length){let end=Math.min(pos+maxChars,txt.length);if(end<txt.length){const c=txt.charCodeAt(end-1);if(c>=0xD800&&c<=0xDBFF)end--;}if(end<=pos)throw Error('Backup chunking could not advance.');parts.push(txt.slice(pos,end));pos=end;}
+  return parts;
 }
 window.uslCloudBackup=async function(){
   const msg=$("syncMessage"),btn=$("pushSheet");
   try{
-    if(msg){msg.textContent='Preparing transactional cloud backup…';msg.className='sync-status working'}
-    if(btn){btn.disabled=true;btn.textContent='Preparing…'}
+    if(msg){msg.textContent='Preparing verified transactional cloud backup…';msg.className='sync-status working'}
+    if(btn){btn.disabled=true;btn.textContent='Backing Up…'}
     if(state.workflow?.mode==='project'&&state.workflow?.approvedSnapshot)archiveCurrentProject();
     const photos=await exportCloudPhotos();
     const payload={schemaVersion:2,appVersion:'8.0.0',savedAt:new Date().toISOString(),state:stateForArchive(state),history:loadHistory(),photos};
-    const bytes=new TextEncoder().encode(JSON.stringify(payload));
-    const overallSha=await sha256HexBytes(bytes);
-    const chunkBytes=24000,totalChunks=Math.ceil(bytes.length/chunkBytes);
-    if(totalChunks<1)throw Error('Backup contains no data.');
-    const begin=await uslApi('cloudBackupBegin',{totalBytes:bytes.length,totalChunks,sha256:overallSha,appVersion:'8.0.0'});
-    const backupId=String(begin.backupId||'');
-    if(!backupId)throw Error('Google did not create a backup transaction.');
-    for(let i=0;i<totalChunks;i++){
-      const part=bytes.slice(i*chunkBytes,Math.min((i+1)*chunkBytes,bytes.length));
-      const chunkSha=await sha256HexBytes(part);
-      const r=await uslApi('cloudBackupChunk',{backupId,index:i,byteLength:part.length,sha256:chunkSha,data:bytesToBase64Url(part)});
-      if(r.accepted!==true||Number(r.index)!==i||Number(r.byteLength)!==part.length)throw Error('Google did not verify backup chunk '+(i+1)+'.');
-      if(msg){msg.textContent=`Uploading verified backup… ${i+1} of ${totalChunks}`;msg.className='sync-status working'}
+    const txt=JSON.stringify(payload),parts=splitBackupText(txt,9000),fullSha=await sha256Text(txt);
+    const begin=await uslApi('backupV4Begin',{totalChars:txt.length,chunkCount:parts.length,sha256:fullSha,savedAt:payload.savedAt});
+    const backupId=String(begin.backupId||'');if(!backupId)throw Error('Cloud backup transaction did not return an ID.');
+    for(let i=0;i<parts.length;i++){
+      if(msg)msg.textContent=`Uploading verified backup… ${i+1} of ${parts.length}`;
+      const chunk=parts[i],chunkSha=await sha256Text(chunk);
+      const ack=await uslApi('backupV4Chunk',{backupId,index:i,chunk,sha256:chunkSha});
+      if(Number(ack.index)!==i||ack.verified!==true)throw Error('Cloud did not verify backup chunk '+(i+1)+'.');
     }
-    const done=await uslApi('cloudBackupCommit',{backupId,totalBytes:bytes.length,totalChunks,sha256:overallSha});
-    if(done.verified!==true||String(done.backupId||'')!==backupId)throw Error('Google did not verify and activate the backup.');
-    if(msg){msg.textContent=`Verified cloud backup complete${done.savedAt?' · '+new Date(done.savedAt).toLocaleString():''}. ${photos.length} photo${photos.length===1?'':'s'} included · ${bytes.length.toLocaleString()} bytes.`;msg.className='sync-status success'}
-  }catch(e){if(msg){msg.textContent='CLOUD BACKUP FAILED: '+(e.message||e);msg.className='sync-status error'}}
+    const done=await uslApi('backupV4Commit',{backupId});
+    if(done.committed!==true||String(done.sha256||'').toLowerCase()!==fullSha)throw Error('Cloud backup did not pass final integrity verification.');
+    if(msg){msg.textContent=`Verified cloud backup complete · ${new Date(done.savedAt||payload.savedAt).toLocaleString()}. ${photos.length} photo${photos.length===1?'':'s'} included.`;msg.className='sync-status success'}
+  }catch(e){if(msg){msg.textContent='CLOUD BACKUP FAILED — local data was not replaced: '+(e.message||e);msg.className='sync-status error'}}
   finally{if(btn){btn.disabled=false;btn.textContent='Back Up Cloud'}}
 };
-async function loadVerifiedCloudBackup(){
-  const info=await uslApi('cloudRestoreStart');
-  if(!info||info.found!==true)throw Error(info?.message||'No verified cloud backup is available.');
-  const backupId=String(info.backupId||''),totalBytes=Number(info.totalBytes),totalChunks=Number(info.totalChunks),expectedSha=String(info.sha256||'').toLowerCase();
-  if(!backupId)throw Error('Cloud restore did not return a backup ID.');
-  if(!Number.isSafeInteger(totalBytes)||totalBytes<2||totalBytes>60000000)throw Error('Cloud backup byte size is invalid.');
-  if(!Number.isSafeInteger(totalChunks)||totalChunks<1||totalChunks>5000)throw Error('Cloud backup chunk count is invalid.');
-  if(!/^[a-f0-9]{64}$/.test(expectedSha))throw Error('Cloud backup integrity signature is invalid.');
-  const complete=new Uint8Array(totalBytes); let offset=0;
-  for(let i=0;i<totalChunks;i++){
-    const part=await uslApi('cloudRestoreChunk',{backupId,index:i});
-    if(String(part.backupId||'')!==backupId||Number(part.index)!==i)throw Error('Cloud backup changed during restore.');
-    const raw=base64UrlToBytes(part.data);
-    const declared=Number(part.byteLength);
-    if(!Number.isSafeInteger(declared)||declared!==raw.length)throw Error('Restore chunk '+(i+1)+' has an invalid byte length.');
-    if(offset+raw.length>complete.length)throw Error('Restore data exceeds the verified backup size.');
-    const chunkSha=await sha256HexBytes(raw);
-    if(chunkSha!==String(part.sha256||'').toLowerCase())throw Error('Restore chunk '+(i+1)+' failed integrity verification.');
-    complete.set(raw,offset); offset+=raw.length;
-    const m=$("syncMessage");if(m){m.textContent=`Restoring verified backup… ${i+1} of ${totalChunks}`;m.className='sync-status working'}
+async function loadCloudBackupV4(){
+  const info=await uslApi('restoreV4Start');
+  if(!info||info.found!==true)return null;
+  const backupId=String(info.backupId||''),count=Number(info.chunkCount),total=Number(info.totalChars),expected=String(info.sha256||'').toLowerCase();
+  if(!backupId)throw Error('Restore manifest is missing its transaction ID.');
+  if(!Number.isSafeInteger(count)||count<1||count>20000)throw Error('Restore manifest has an invalid chunk count.');
+  if(!Number.isSafeInteger(total)||total<2)throw Error('Restore manifest has an invalid backup size.');
+  if(!/^[a-f0-9]{64}$/.test(expected))throw Error('Restore manifest has an invalid integrity signature.');
+  const parts=[];let received=0;
+  for(let i=0;i<count;i++){
+    const p=await uslApi('restoreV4Chunk',{backupId,index:i});
+    if(String(p.backupId||'')!==backupId||Number(p.index)!==i||typeof p.chunk!=='string')throw Error('Restore chunk '+(i+1)+' did not match the verified transaction.');
+    const actualChunkSha=await sha256Text(p.chunk);
+    if(actualChunkSha!==String(p.sha256||'').toLowerCase())throw Error('Restore chunk '+(i+1)+' failed integrity verification.');
+    parts.push(p.chunk);received+=p.chunk.length;
   }
-  if(offset!==totalBytes)throw Error(`Restore received ${offset} bytes but expected ${totalBytes}.`);
-  const actualSha=await sha256HexBytes(complete);
-  if(actualSha!==expectedSha)throw Error('Complete cloud backup failed SHA-256 verification. Local data was not changed.');
-  let backup;
-  try{backup=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(complete))}catch(_){throw Error('Verified backup could not be decoded as project data.');}
-  if(!backup||typeof backup!=='object'||!backup.state||!backup.state.project)throw Error('Verified backup is missing project state.');
+  if(received!==total)throw Error(`Restore size verification failed (${received} of ${total} characters).`);
+  const txt=parts.join(''),actual=await sha256Text(txt);
+  if(actual!==expected)throw Error('Complete cloud backup failed integrity verification. Local data was not changed.');
+  let backup;try{backup=JSON.parse(txt)}catch(_){throw Error('Verified backup could not be decoded. Local data was not changed.');}
+  if(!backup||typeof backup!=='object'||!backup.state||!backup.state.project)throw Error('Verified backup is missing required project data. Local data was not changed.');
   return backup;
 }
 window.uslCloudRestore=async function(){
   const msg=$("syncMessage"),btn=$("pullSheet");
   try{
-    if(!confirm('Restore the latest VERIFIED UrbanSkyLine cloud backup on this device? Current local estimate data will be replaced only after integrity verification succeeds.'))return;
-    if(msg){msg.textContent='Locating verified cloud backup…';msg.className='sync-status working'}
+    if(!confirm('Restore the latest VERIFIED UrbanSkyLine cloud backup on this device? Current local data will only be replaced after all integrity checks pass.'))return;
+    if(msg){msg.textContent='Downloading and verifying cloud backup…';msg.className='sync-status working'}
     if(btn){btn.disabled=true;btn.textContent='Restoring…'}
-    const backup=await loadVerifiedCloudBackup();
-    // Commit locally only after the entire backup has passed validation.
-    state=backup.state;
-    if(!state.project.photoProjectId)state.project.photoProjectId='p_'+Date.now()+'_'+Math.random().toString(36).slice(2,8);
-    localStorage.setItem('uslPaintApp',JSON.stringify(state));
-    saveHistory(Array.isArray(backup.history)?backup.history:[]);
+    const backup=await loadCloudBackupV4();if(!backup)throw Error('No verified V8 cloud backup exists yet. Create a new Back Up Cloud first.');
+    const restored=backup.state;
+    if(!restored.project.photoProjectId)restored.project.photoProjectId='p_'+Date.now()+'_'+Math.random().toString(36).slice(2,8);
+    state=restored;localStorage.setItem('uslPaintApp',JSON.stringify(state));saveHistory(Array.isArray(backup.history)?backup.history:[]);
     await replaceProjectPhotosFromCloud(backup.photos||[]);
-    bindProject();bindPhoneFormatting();bindPhotoInputs();bindSubcontractor();renderRooms();renderCabinets();renderColors();refreshAll();await renderProjectPhotos();
-    if(msg){msg.textContent=`Cloud restore complete${backup.savedAt?' · backup '+new Date(backup.savedAt).toLocaleString():''}. Integrity verified before local replacement.`;msg.className='sync-status success'}
-  }catch(e){if(msg){msg.textContent='CLOUD RESTORE FAILED: '+(e.message||e);msg.className='sync-status error'}}
+    bindProject();bindPhotoInputs();bindSubcontractor();renderRooms();renderCabinets();renderColors();refreshAll();await renderProjectPhotos();
+    if(msg){msg.textContent='Verified cloud restore complete. Project data, history, signatures and photos were restored.';msg.className='sync-status success'}
+  }catch(e){if(msg){msg.textContent='CLOUD RESTORE FAILED — local data was not changed: '+(e.message||e);msg.className='sync-status error'}}
   finally{if(btn){btn.disabled=false;btn.textContent='Restore Cloud'}}
 };
 
@@ -848,7 +898,7 @@ bindProject();bindPhoneFormatting();bindPhotoInputs();bindMaterialSettings();bin
 
 // V6.8 — installed PWA update manager. Project/settings data remains in localStorage.
 (() => {
-  const CURRENT_VERSION = '8.0.0';
+  const CURRENT_VERSION = '8.0.1';
   const banner = () => document.getElementById('updateBanner');
   const compareVersions = (a,b) => {
     const aa=String(a).split('.').map(Number), bb=String(b).split('.').map(Number);
