@@ -1,9 +1,9 @@
-const CACHE_NAME = 'urbanskyline-v8.1.0-clean';
+const CACHE_NAME = 'urbanskyline-v8.2.0-saved-estimates';
 const APP_SHELL = [
   './?usl_pwa=810',
   './index.html',
-  './styles.css?v=810',
-  './app.js?v=810',
+  './styles.css?v=820',
+  './app.js?v=820',
   './manifest.json',
   './urban-skyline-logo.png'
 ];

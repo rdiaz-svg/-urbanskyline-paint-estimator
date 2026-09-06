@@ -11,7 +11,7 @@ function isBedroomPreset(name){return name==='Master Bedroom'||/^Bedroom [1-4]$/
 function defaultClosetType(name){return name==='Master Bedroom'?'Walk-in':isBedroomPreset(name)?'Reach-in':'None'}
 function applyDefaultCloset(r){if(!isBedroomPreset(r.name))return;r.closets='Yes';r.closetType=defaultClosetType(r.name);r.closetLength=r.name==='Master Bedroom'?6:(r.closetLength||6);r.closetWidth=r.name==='Master Bedroom'?8:(r.closetWidth||6);r.closetWalls=true;r.closetCeiling=true;r.closetBaseboards=true;if(!r.closetOverride)r.closetOverride='auto'}
 const fresh=()=>({pricing:{targetMargin:0.40},cabinets:[],materialSettings:{wallProduct:"ProMar 200 Zero VOC Interior Latex",wallCost:43.30,ceilingProduct:"Premium Ceiling Paint",ceilingCost:37.45,trimProduct:"Emerald Urethane Trim Enamel",trimCost:75.01,primerProduct:"ProBlock Premium All-Purpose Water-Based Interior/Exterior Primer",primerCost:27.95,suppliesPct:0},project:{customerName:"",phone:"",email:"",address:"",cityZip:"",estimator:"Roberto Diaz",projectType:"Interior Painting",wallCondition:"Good",notes:"",photoProjectId:"p_"+Date.now()+"_"+Math.random().toString(36).slice(2,8)},subcontractor:{name:"",startDate:"",paymentStatus:"Not Paid",datePaid:"",actualHours:"",agreedPayout:"",amountPaid:"",notes:""},rooms:ROOM_PRESETS.map(r=>({name:r[0],length:r[1],width:r[2],height:r[3],price:r[4],selected:false,package:"Full Room",walls:"Auto",ceiling:"Auto",trim:"Auto",baseboards:"Auto",doors:"Auto",windows:"Auto",closets:isBedroomPreset(r[0])?"Yes":"No",crown:"Auto",crownPresent:true,doorCount:1,doorSides:"Both Sides",doorCasing:false,windowCount:1,closetWallSf:0,closetType:defaultClosetType(r[0]),closetOverride:isBedroomPreset(r[0])?"auto":"none",closetLength:6,closetWidth:r[0]==="Master Bedroom"?8:6,closetWalls:true,closetCeiling:true,closetBaseboards:true,crownLf:0,wallColor:"Main Wall Color",wallSw:"",ceilingColor:"Ceiling White",ceilingSw:"",trimColor:"Trim White",trimSw:"",primerMode:"None",primerTarget:"Walls",repairs:{smallHole:0,mediumPatch:0,largeRepair:0,crackPatch:0,textureRepair:0,extensiveCaulk:0,stainPrep:0,wallpaperRemoval:0,customQty:0,customDescription:"Custom Extra",customHours:0,customMaterials:0}}))});
-let state;try{state=JSON.parse(localStorage.getItem("uslPaintApp"))||fresh()}catch(e){state=fresh()}if(!state.pricing)state.pricing={targetMargin:0.40};if(!(state.pricing.targetMargin>=0.20&&state.pricing.targetMargin<0.90))state.pricing.targetMargin=0.40;if(!state.subcontractor)state.subcontractor={name:"",startDate:"",paymentStatus:"Not Paid",datePaid:"",actualHours:"",agreedPayout:"",amountPaid:"",notes:""};if(!state.workflow)state.workflow={mode:"estimate",estimateStatus:"Draft",projectStatus:"Not Started",approvedAt:"",approvedSnapshot:null,changeOrders:[]};if(!Array.isArray(state.workflow.changeOrders))state.workflow.changeOrders=[];if(!state.workflow.approvalSignature)state.workflow.approvalSignature=null;if(!state.subcontractor.signature)state.subcontractor.signature=null;if(!state.subcontractor.signedAt)state.subcontractor.signedAt='';if(!state.subcontractor.signedName)state.subcontractor.signedName='';if(!Array.isArray(state.cabinets))state.cabinets=[];if(!state.project.photoProjectId){state.project.photoProjectId="p_"+Date.now()+"_"+Math.random().toString(36).slice(2,8);localStorage.setItem("uslPaintApp",JSON.stringify(state));}
+let state;try{state=JSON.parse(localStorage.getItem("uslPaintApp"))||fresh()}catch(e){state=fresh()}if(!state.pricing)state.pricing={targetMargin:0.40};if(!(state.pricing.targetMargin>=0.20&&state.pricing.targetMargin<0.90))state.pricing.targetMargin=0.40;if(!state.subcontractor)state.subcontractor={name:"",startDate:"",paymentStatus:"Not Paid",datePaid:"",actualHours:"",agreedPayout:"",amountPaid:"",notes:""};if(!state.workflow)state.workflow={mode:"estimate",estimateStatus:"Draft",projectStatus:"Not Started",approvedAt:"",approvedSnapshot:null,changeOrders:[]};if(!state.workflow.estimateId)state.workflow.estimateId='est_'+Date.now()+'_'+Math.random().toString(36).slice(2,8);if(!state.workflow.createdAt)state.workflow.createdAt=new Date().toISOString();if(!Array.isArray(state.workflow.changeOrders))state.workflow.changeOrders=[];if(!state.workflow.approvalSignature)state.workflow.approvalSignature=null;if(!state.subcontractor.signature)state.subcontractor.signature=null;if(!state.subcontractor.signedAt)state.subcontractor.signedAt='';if(!state.subcontractor.signedName)state.subcontractor.signedName='';if(!Array.isArray(state.cabinets))state.cabinets=[];if(!state.project.photoProjectId){state.project.photoProjectId="p_"+Date.now()+"_"+Math.random().toString(36).slice(2,8);localStorage.setItem("uslPaintApp",JSON.stringify(state));}
 const HISTORY_KEY="uslPaintHistory";
 function loadHistory(){try{return JSON.parse(localStorage.getItem(HISTORY_KEY))||[]}catch(e){return []}}
 function saveHistory(items){localStorage.setItem(HISTORY_KEY,JSON.stringify(items))}
@@ -28,7 +28,7 @@ function startNewEstimate(){
   const msg=isProject?'Save this approved project to Project History and start a new estimate?':'Start a new estimate? Current unsaved estimate information will be cleared.';
   if(!confirm(msg))return;
   if(isProject)archiveCurrentProject();
-  state=fresh(); localStorage.setItem('uslPaintApp',JSON.stringify(state)); bindProject();bindPhotoInputs();bindSubcontractor();renderRooms();renderCabinets();renderColors();refreshAll();nav('project');
+  state=fresh();state.workflow={mode:'estimate',estimateStatus:'Draft',projectStatus:'Not Started',approvedAt:'',approvedSnapshot:null,changeOrders:[],estimateId:'est_'+Date.now()+'_'+Math.random().toString(36).slice(2,8),createdAt:new Date().toISOString(),lastSavedAt:''}; localStorage.setItem('uslPaintApp',JSON.stringify(state)); bindProject();bindPhotoInputs();bindSubcontractor();renderRooms();renderCabinets();renderColors();refreshAll();nav('project');
 }
 function openHistoryProject(id){
   const item=loadHistory().find(x=>x.id===id); if(!item||!item.state)return;
@@ -41,6 +41,7 @@ function renderHistory(){
   el.innerHTML=items.map(x=>`<button class="history-item" type="button" data-history-id="${x.id}"><span><strong>${x.customerName}</strong><small>${x.address||'No address'} · ${new Date(x.approvedAt).toLocaleDateString()}</small></span><span><strong>${money(x.contract)}</strong><small>${x.status}</small></span></button>`).join('');
   el.querySelectorAll('[data-history-id]').forEach(b=>b.onclick=()=>openHistoryProject(b.dataset.historyId));
 }
+function htmlEsc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 const $=id=>document.getElementById(id),money=n=>new Intl.NumberFormat("en-US",{style:"currency",currency:"USD",maximumFractionDigits:0}).format(n||0),money2=n=>new Intl.NumberFormat("en-US",{style:"currency",currency:"USD",minimumFractionDigits:2,maximumFractionDigits:2}).format(n||0),esc=s=>String(s||"").replaceAll('"','&quot;');function save(){localStorage.setItem("uslPaintApp",JSON.stringify(state));showSaved();refreshAll()}
 function showSaved(){const e=$("savedIndicator");if(!e)return;e.textContent="Saved ✓";e.classList.add("visible");clearTimeout(window.__savedTimer);window.__savedTimer=setTimeout(()=>e.classList.remove("visible"),1800)}
 
@@ -84,7 +85,7 @@ function nav(v){
     alert('This estimate is approved and locked. Any scope or price change must be created as a Change Order.');
     v='changeorders';
   }
-  document.querySelectorAll('.view').forEach(x=>x.classList.toggle('active',x.dataset.view===v));window.scrollTo(0,0);if(v==='proposal'){if(isApprovedProject()&&state.workflow.approvedSnapshot?.proposalHTML&&$('proposalContent'))$('proposalContent').innerHTML=state.workflow.approvedSnapshot.proposalHTML;else renderProposal()}if(v==='subcontractor')renderSubcontractor();if(v==='execution')renderExecution();if(v==='history')renderHistory();if(v==='changeorders')renderChangeOrders();if(v==='currentcontract')renderCurrentContractSummary()}document.addEventListener('click',e=>{const b=e.target.closest('[data-go]');if(b)nav(b.dataset.go)});
+  document.querySelectorAll('.view').forEach(x=>x.classList.toggle('active',x.dataset.view===v));window.scrollTo(0,0);if(v==='proposal'){if(isApprovedProject()&&state.workflow.approvedSnapshot?.proposalHTML&&$('proposalContent'))$('proposalContent').innerHTML=state.workflow.approvedSnapshot.proposalHTML;else renderProposal()}if(v==='subcontractor')renderSubcontractor();if(v==='execution')renderExecution();if(v==='history')renderHistory();if(v==='savedestimates')renderSavedEstimates();if(v==='changeorders')renderChangeOrders();if(v==='currentcontract')renderCurrentContractSummary()}document.addEventListener('click',e=>{const b=e.target.closest('[data-go]');if(b)nav(b.dataset.go)});
 
 const PHOTO_DB_NAME="uslPaintPhotoDB",PHOTO_STORE="photos",PHOTO_LIMIT=12;
 function photoDb(){return new Promise((resolve,reject)=>{const req=indexedDB.open(PHOTO_DB_NAME,1);req.onupgradeneeded=()=>{const db=req.result;if(!db.objectStoreNames.contains(PHOTO_STORE)){const st=db.createObjectStore(PHOTO_STORE,{keyPath:"id"});st.createIndex("projectId","projectId",{unique:false})}};req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)})}
@@ -763,6 +764,83 @@ window.uslSaveSheet=async function(){
 };
 
 
+
+const SAVED_ESTIMATE_SCHEMA=3;
+let savedEstimateCache=[];
+function ensureEstimateIdentity(){
+  state.workflow=state.workflow||{mode:'estimate',estimateStatus:'Draft',projectStatus:'Not Started',approvedAt:'',approvedSnapshot:null,changeOrders:[]};
+  if(!state.workflow.estimateId)state.workflow.estimateId='est_'+Date.now()+'_'+Math.random().toString(36).slice(2,8);
+  if(!state.workflow.createdAt)state.workflow.createdAt=new Date().toISOString();
+  return state.workflow.estimateId;
+}
+function savedEstimateMeta(){
+  ensureEstimateIdentity();const c=calc(),w=state.workflow||{},p=state.project||{};
+  return{estimateId:w.estimateId,customerName:p.customerName||'Unnamed Estimate',address:p.address||'',cityZip:p.cityZip||'',status:w.mode==='project'?'Approved':(w.estimateStatus||'Draft'),amount:w.mode==='project'&&w.approvedSnapshot?Number(w.approvedSnapshot?.totals?.sale||0):Number(c.sale||0),createdAt:w.createdAt||new Date().toISOString()};
+}
+function setSavedEstimateStatus(text,kind='working'){
+  ['saveDraftCloudStatus','quickSaveDraftStatus','savedEstimateStatus'].forEach(id=>{const e=$(id);if(e){e.textContent=text;e.className='sync-status '+kind}})
+}
+async function saveCurrentEstimateToCloud(){
+  const id=ensureEstimateIdentity(),meta=savedEstimateMeta();
+  try{
+    setSavedEstimateStatus('Preparing saved estimate…','working');
+    localStorage.setItem('uslPaintApp',JSON.stringify(state));
+    const photos=await exportCloudPhotos();
+    const payload={schemaVersion:SAVED_ESTIMATE_SCHEMA,appVersion:'8.2.0',savedAt:new Date().toISOString(),estimateId:id,meta,state:stateForArchive(state),photos};
+    const txt=JSON.stringify(payload),bytes=new TextEncoder().encode(txt),fullSha=await sha256Bytes(bytes),chunkBytes=24000,totalChunks=Math.ceil(bytes.length/chunkBytes);
+    const begin=await uslApi('savedEstimateBegin',{estimateId:id,totalBytes:bytes.length,totalChunks,sha256:fullSha,appVersion:payload.appVersion,meta});
+    const transactionId=String(begin.transactionId||''),serverChunk=Number(begin.chunkBytes||chunkBytes);if(!transactionId)throw Error('Saved estimate transaction did not return an ID.');
+    if(serverChunk!==chunkBytes)throw Error('Saved estimate chunk size mismatch.');
+    for(let i=0;i<totalChunks;i++){
+      setSavedEstimateStatus(`Saving estimate… ${i+1} of ${totalChunks}`,'working');
+      const chunk=bytes.subarray(i*chunkBytes,Math.min((i+1)*chunkBytes,bytes.length)),chunkSha=await sha256Bytes(chunk);
+      const ack=await uslApi('savedEstimateChunk',{transactionId,index:i,byteLength:chunk.length,sha256:chunkSha,data:bytesToBase64Url(chunk)});
+      if(ack.accepted!==true||Number(ack.index)!==i||String(ack.sha256||'').toLowerCase()!==chunkSha)throw Error('Cloud did not verify saved estimate chunk '+(i+1)+'.');
+    }
+    const done=await uslApi('savedEstimateCommit',{transactionId,estimateId:id,totalBytes:bytes.length,totalChunks,sha256:fullSha});
+    if(done.verified!==true)throw Error('Saved estimate did not pass final integrity verification.');
+    state.workflow.lastSavedAt=done.savedAt||payload.savedAt;localStorage.setItem('uslPaintApp',JSON.stringify(state));
+    setSavedEstimateStatus(`Saved to cloud · ${new Date(state.workflow.lastSavedAt).toLocaleString()} · ${photos.length} photo${photos.length===1?'':'s'}.`,'success');
+    await loadSavedEstimateList();return true;
+  }catch(e){setSavedEstimateStatus('SAVE FAILED — current local estimate was not lost: '+(e.message||e),'error');return false}
+}
+async function loadSavedEstimateList(){
+  try{const d=await uslApi('listSavedEstimates');savedEstimateCache=Array.isArray(d.items)?d.items:[];drawSavedEstimateList();return savedEstimateCache}catch(e){setSavedEstimateStatus('Could not load saved estimates: '+(e.message||e),'error');return []}
+}
+function drawSavedEstimateList(){
+  const el=$('savedEstimateList');if(!el)return;const q=String($('savedEstimateSearch')?.value||'').trim().toLowerCase();
+  const items=savedEstimateCache.filter(x=>!q||[x.customerName,x.address,x.cityZip,x.estimateId,x.status].some(v=>String(v||'').toLowerCase().includes(q)));
+  if(!items.length){el.innerHTML='<p class="muted">No matching saved estimates.</p>';return}
+  el.innerHTML=items.map(x=>`<div class="saved-estimate-item"><div class="saved-estimate-main"><div><strong>${htmlEsc(x.customerName||'Unnamed Estimate')}</strong><small>${htmlEsc(x.address||'No address')}${x.cityZip?' · '+htmlEsc(x.cityZip):''}</small><span class="saved-estimate-badge">${htmlEsc(x.status||'Draft')}</span><small>Estimate ${htmlEsc(x.estimateId||'')} · saved ${new Date(x.savedAt).toLocaleString()}</small></div><div class="saved-estimate-amount"><strong>${money(Number(x.amount||0))}</strong></div></div><div class="saved-estimate-actions"><button class="primary" type="button" data-saved-open="${htmlEsc(x.estimateId)}">Open</button><button class="secondary" type="button" data-saved-duplicate="${htmlEsc(x.estimateId)}">Duplicate</button><button class="danger" type="button" data-saved-delete="${htmlEsc(x.estimateId)}">Delete</button></div></div>`).join('');
+  el.querySelectorAll('[data-saved-open]').forEach(b=>b.onclick=()=>openSavedEstimate(b.dataset.savedOpen,false));
+  el.querySelectorAll('[data-saved-duplicate]').forEach(b=>b.onclick=()=>openSavedEstimate(b.dataset.savedDuplicate,true));
+  el.querySelectorAll('[data-saved-delete]').forEach(b=>b.onclick=()=>deleteSavedEstimate(b.dataset.savedDelete));
+}
+async function downloadSavedEstimate(estimateId){
+  const info=await uslApi('savedEstimateRestoreStart',{estimateId});if(!info||info.found!==true)throw Error('Saved estimate was not found.');
+  const transactionId=String(info.transactionId||''),count=Number(info.totalChunks),total=Number(info.totalBytes),expected=String(info.sha256||'').toLowerCase();
+  if(!transactionId||!Number.isSafeInteger(count)||count<1||!Number.isSafeInteger(total)||total<2||!/^[a-f0-9]{64}$/.test(expected))throw Error('Saved estimate manifest is invalid.');
+  const parts=[];let received=0;for(let i=0;i<count;i++){setSavedEstimateStatus(`Opening estimate… ${i+1} of ${count}`,'working');const p=await uslApi('savedEstimateRestoreChunk',{transactionId,index:i});const chunk=base64UrlToBytes(p.data),actual=await sha256Bytes(chunk);if(Number(p.index)!==i||chunk.length!==Number(p.byteLength)||actual!==String(p.sha256||'').toLowerCase())throw Error('Saved estimate chunk '+(i+1)+' failed integrity verification.');parts.push(chunk);received+=chunk.length}
+  if(received!==total)throw Error('Saved estimate size verification failed.');const bytes=joinByteChunks(parts,total),actual=await sha256Bytes(bytes);if(actual!==expected)throw Error('Saved estimate failed complete SHA-256 verification.');
+  let payload;try{payload=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes))}catch(_){throw Error('Saved estimate data could not be decoded.')}if(!payload?.state?.project)throw Error('Saved estimate is missing project data.');return payload;
+}
+async function openSavedEstimate(estimateId,duplicate=false){
+  try{
+    const payload=await downloadSavedEstimate(estimateId),restored=payload.state;
+    if(duplicate){restored.workflow=restored.workflow||{};restored.workflow.mode='estimate';restored.workflow.estimateStatus='Draft';restored.workflow.projectStatus='Not Started';restored.workflow.approvedAt='';restored.workflow.approvedSnapshot=null;restored.workflow.approvalSignature=null;restored.workflow.changeOrders=[];restored.workflow.estimateId='est_'+Date.now()+'_'+Math.random().toString(36).slice(2,8);restored.workflow.createdAt=new Date().toISOString();restored.workflow.lastSavedAt='';restored.project.photoProjectId='p_'+Date.now()+'_'+Math.random().toString(36).slice(2,8)}
+    state=restored;ensureEstimateIdentity();localStorage.setItem('uslPaintApp',JSON.stringify(state));await replaceProjectPhotosFromCloud(payload.photos||[]);bindProject();bindPhotoInputs();bindSubcontractor();renderRooms();renderCabinets();renderColors();refreshAll();await renderProjectPhotos();setSavedEstimateStatus(duplicate?'Duplicate created locally. Save it when ready.':'Saved estimate opened successfully.','success');nav('project');
+  }catch(e){setSavedEstimateStatus('OPEN FAILED — current local estimate was not replaced: '+(e.message||e),'error')}
+}
+async function deleteSavedEstimate(estimateId){
+  const item=savedEstimateCache.find(x=>x.estimateId===estimateId);if(!confirm(`Delete saved estimate for ${item?.customerName||estimateId}? This removes the cloud copy.`))return;
+  try{setSavedEstimateStatus('Deleting saved estimate…','working');await uslApi('deleteSavedEstimate',{estimateId});savedEstimateCache=savedEstimateCache.filter(x=>x.estimateId!==estimateId);drawSavedEstimateList();setSavedEstimateStatus('Saved estimate deleted from cloud.','success')}catch(e){setSavedEstimateStatus('DELETE FAILED: '+(e.message||e),'error')}
+}
+async function renderSavedEstimates(){
+  const search=$('savedEstimateSearch');if(search&&!search.dataset.bound){search.dataset.bound='1';search.addEventListener('input',drawSavedEstimateList)}
+  await loadSavedEstimateList();
+}
+window.uslSaveCurrentEstimate=saveCurrentEstimateToCloud;
+
 function blobToDataUrl(blob){return new Promise((resolve,reject)=>{const fr=new FileReader();fr.onload=()=>resolve(fr.result);fr.onerror=()=>reject(fr.error||new Error('Could not read photo'));fr.readAsDataURL(blob)})}
 async function exportCloudPhotos(){const photos=await getProjectPhotos();const out=[];for(const p of photos){out.push({id:p.id,projectId:p.projectId,created:p.created,name:p.name||'Job photo',dataUrl:await blobToDataUrl(p.blob)})}return out}
 function dataUrlToBlob(dataUrl){const parts=String(dataUrl||'').split(','),meta=parts[0]||'',bin=atob(parts[1]||''),m=/data:([^;]+)/.exec(meta),u8=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u8[i]=bin.charCodeAt(i);return new Blob([u8],{type:m?m[1]:'image/jpeg'})}
@@ -794,7 +872,7 @@ window.uslCloudBackup=async function(){
     if(btn){btn.disabled=true;btn.textContent='Backing Up…'}
     if(state.workflow?.mode==='project'&&state.workflow?.approvedSnapshot)archiveCurrentProject();
     const photos=await exportCloudPhotos();
-    const payload={schemaVersion:2,appVersion:'8.1.0',savedAt:new Date().toISOString(),state:stateForArchive(state),history:loadHistory(),photos};
+    const payload={schemaVersion:2,appVersion:'8.2.0',savedAt:new Date().toISOString(),state:stateForArchive(state),history:loadHistory(),photos};
     const txt=JSON.stringify(payload),bytes=new TextEncoder().encode(txt),fullSha=await sha256Bytes(bytes);
     const requestedChunkBytes=24000,totalChunks=Math.ceil(bytes.length/requestedChunkBytes);
     const begin=await uslApi('cloudBackupBegin',{totalBytes:bytes.length,totalChunks,sha256:fullSha,appVersion:payload.appVersion});
@@ -857,6 +935,7 @@ window.uslCloudRestore=async function(){
   finally{if(btn){btn.disabled=false;btn.textContent='Restore Cloud'}}
 };
 
+$('saveDraftCloudBtn')?.addEventListener('click',saveCurrentEstimateToCloud);$('quickSaveDraftBtn')?.addEventListener('click',saveCurrentEstimateToCloud);$('savedEstimateSaveCurrent')?.addEventListener('click',saveCurrentEstimateToCloud);$('savedEstimateNew')?.addEventListener('click',startNewEstimate);
 const syncInput=$("syncUrl");
 if(syncInput){syncInput.value=USL_SYNC.url;syncInput.addEventListener("change",()=>{const u=syncInput.value.trim();if(validSyncUrl(u)){localStorage.setItem("uslSyncUrl",u);USL_SYNC.url=u;addressConnectionMessage("Google address suggestions connected on this device.","success")}else if(u){addressConnectionMessage("The Google Web App URL must end in /exec.","warning")}})}
 addressConnectionMessage(USL_SYNC.url?"Google address suggestions connected on this device.":"Address suggestions need one-time Google setup on this device. Use Google Sheet Sync below.",USL_SYNC.url?"success":"warning");
@@ -870,7 +949,7 @@ bindProject();bindPhoneFormatting();bindPhotoInputs();bindMaterialSettings();bin
 
 // V6.8 — installed PWA update manager. Project/settings data remains in localStorage.
 (() => {
-  const CURRENT_VERSION = '8.1.0';
+  const CURRENT_VERSION = '8.2.0';
   const banner = () => document.getElementById('updateBanner');
   const compareVersions = (a,b) => {
     const aa=String(a).split('.').map(Number), bb=String(b).split('.').map(Number);

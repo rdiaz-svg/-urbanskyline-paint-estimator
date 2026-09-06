@@ -1,27 +1,40 @@
-UrbanSkyLine Paint Estimator V8.1.0 — Clean Integrity Rebuild
+UrbanSkyLine Paint Estimator V8.2.0 — Saved Estimates & Project Retrieval
+Release date: 2026-09-06
 
-BUILD STRATEGY
-- Known-good V7.2.5 iPad Project input markup and viewport are preserved.
-- V8 Cloud Sync 2.0 is retained using the reconciled v5 protocol.
-- Google Places radius remains 50,000 m (valid maximum).
-- No custom keyboard, focus, visualViewport, scrollIntoView, or Project inputmode overrides were added.
-- New PWA identity: ?usl_pwa=810. This intentionally creates a clean installed-app context instead of inheriting the old app-specific standalone state.
+PURPOSE
+V8.2 adds a real cloud Saved Estimates library without changing the working pricing engine, Project input behavior, address autocomplete, proposal calculations, or iPad keyboard handling.
 
-IMPORTANT IPAD INSTALL TEST
-1. Deploy all 8 GitHub files together.
-2. Deploy Apps Script v5.2 using the existing /exec URL.
-3. On iPad, open the site in Safari first and confirm Project fields + address.
-4. Remove the OLD UrbanSkyLine home-screen icon.
-5. Add the newly deployed app to Home Screen again.
-6. Open the NEW icon and test Customer Name, Email, Address, City/ZIP, Estimator and Notes.
+NEW
+- Save Current Draft from Home or Project.
+- Saved Estimates cloud library.
+- Search by customer, address, estimate ID, or status.
+- Open and continue editing any saved estimate.
+- Duplicate a saved estimate into a new independent draft.
+- Delete a saved estimate from cloud.
+- Draft payload includes project, rooms/scope, cabinets, colors, pricing, notes, workflow data, and project photos.
+- Every save uses 24,000-byte chunks plus SHA-256 verification before the new cloud copy becomes active.
+- Updating an existing estimate is transactional: the previous verified copy is retained until the replacement passes verification.
 
-This reinstall step is required for the keyboard test because the clean rebuild uses a new PWA identity. The old installed icon can preserve its own standalone application state even after website files change.
+BACKEND
+Deploy UrbanSkyLine_AppsScript_API_v5_3_SavedEstimates.gs as a NEW VERSION of the existing Apps Script Web App deployment. Keep the same /exec deployment URL.
+The backend creates a Drive folder named "UrbanSkyLine Saved Estimates" automatically.
 
-QC GATES
-- JS syntax: pass
-- Project input markup: matches V7.2.5
-- Viewport: matches V7.2.5
-- Cloud frontend actions: v5 names only
-- Backend radius: 50,000 m
-- Version/cache references: 8.1.0 / 810 only
-- Fresh PWA manifest id/start_url: usl_pwa=810
+GITHUB / PWA
+Upload the eight app files in the GitHub package to the existing repository:
+index.html
+app.js
+styles.css
+manifest.json
+sw.js
+version.json
+urban-skyline-logo.png
+README.txt
+
+Do not remove/reinstall the iPad Home Screen app for this update. V8.2 intentionally preserves the V8.1 PWA identity.
+
+QC / INTEGRITY
+- V8.2 keeps the known-good viewport: width=device-width,initial-scale=1.
+- No keyboard behavior changes were made. Project customer/address fields retain the V8.1 native iPad input behavior; no VisualViewport/focus/forced-keyboard code was added.
+- Address autocomplete remains at Google Places radius 50,000 meters.
+- Existing Cloud Sync 2.0 backup/restore actions remain unchanged.
+- Existing estimating, pricing, materials, signature, proposal, project execution, change-order, and local Project History logic remain in place.

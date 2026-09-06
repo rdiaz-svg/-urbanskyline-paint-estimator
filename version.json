@@ -1,1 +1,6 @@
-{"version":"8.1.0","build":"810","released":"2026-09-06","pwaIdentity":"usl_pwa=810"}
+{
+  "version": "8.2.0",
+  "build": 820,
+  "released": "2026-09-06",
+  "notes": "Saved Estimates & Project Retrieval"
+}
