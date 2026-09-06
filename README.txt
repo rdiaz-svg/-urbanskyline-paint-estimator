@@ -1,15 +1,14 @@
-UrbanSkyLine Paint Estimator V8.2.1 — Human-Readable Estimate Number
+UrbanSkyLine Paint Estimator V8.3.0 — Guided Estimate Workflow
 
-CHANGE
-- Saved Estimates now display: Estimate # [house number + street address] — [MM/DD/YYYY].
-- Example: Estimate # 3608 Carver Court Lane — 09/06/2026.
-- Search includes the human-readable estimate number.
-- The original hidden system estimateId is preserved for cloud integrity, Open, Duplicate, Delete, and overwrite behavior.
-- Existing saved estimates automatically receive the readable display number from their saved address and estimate creation date; no migration is required.
+WHAT CHANGED
+- Adds a five-step progress indicator: Project → Rooms → Colors → Estimate → Proposal.
+- Adds large Continue / Back controls to the estimating workflow.
+- Validates required information before advancing: customer/address, selected scope, room measurements, required color names, and non-zero estimate price.
+- Shows the next required item directly beneath the progress indicator.
+- Keeps existing Saved Estimates, human-readable Estimate Number, pricing engine, cloud sync, address autocomplete, proposal/signature, change orders, photos, and iPad keyboard behavior unchanged.
 
-UNCHANGED
-- Pricing engine, direct cost, margin logic, proposal, rooms, photos, address autocomplete, cloud chunk verification, and iPad keyboard behavior.
-- Apps Script API remains v5.3; no backend redeployment is required for this display-only release.
+DEPLOYMENT
+Upload these same 8 GitHub app files over the current files. Apps Script API v5.3 does not change for V8.3.0.
 
-DEPLOY
-Upload the 8 GitHub files. The installed PWA will detect V8.2.1 through version.json.
+QC
+Built from the validated V8.2.1 baseline. No keyboard viewport/input modifications. PWA identity remains unchanged.

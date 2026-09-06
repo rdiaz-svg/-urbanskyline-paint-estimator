@@ -1,6 +1,6 @@
 {
-  "version": "8.2.1",
-  "build": 821,
+  "version": "8.3.0",
+  "build": 830,
   "released": "2026-09-06",
-  "notes": "Human-readable Estimate Number"
+  "notes": "Guided Estimate Workflow, progress indicators, and step validation"
 }

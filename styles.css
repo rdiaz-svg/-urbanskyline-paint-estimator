@@ -109,3 +109,20 @@
 .saved-estimate-actions button{flex:1;min-width:120px}
 .saved-estimate-badge{display:inline-block;font-size:.72rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase;border-radius:999px;padding:4px 8px;background:#eef3f0;color:#21553e;margin-top:6px}
 @media(max-width:700px){.saved-estimate-main{display:block}.saved-estimate-amount{text-align:left;margin-top:8px}.saved-estimate-actions button{min-width:0}}
+
+/* V8.3 — Guided Estimate Workflow */
+.guided-progress{margin:0 0 16px;position:sticky;top:0;z-index:70;background:linear-gradient(var(--bg) 88%,transparent);padding:8px 0 10px}
+.guided-steps{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px}
+.guided-step{min-height:58px;border:1px solid #d7c7aa;border-radius:12px;background:#fffaf3;color:#5d432a;display:flex;align-items:center;justify-content:center;gap:7px;padding:8px;box-shadow:none}
+.guided-step span{display:grid;place-items:center;flex:0 0 25px;height:25px;border-radius:50%;background:#eadcc4;font-size:12px;font-weight:900}
+.guided-step small{font-size:11px;font-weight:800;line-height:1.1}
+.guided-step.complete{border-color:#b8d5c2;background:#f3faf5;color:#24563b}.guided-step.complete span{background:#d9eddf;color:#24563b}
+.guided-step.current{outline:2px solid #b9893f;outline-offset:1px;background:#fff6e7}
+.guided-step.locked{opacity:.58}
+.guided-message{margin-top:8px;border:1px solid #e1d2b9;border-radius:10px;padding:9px 11px;background:#fffaf3;color:#684c30;font-size:12px;line-height:1.35}
+.guided-message.ready{border-color:#bad6c3;background:#f0f8f2;color:#24563b}
+.guided-actions{display:grid;grid-template-columns:1fr 1.35fr;gap:10px;margin:18px 0 8px}
+.guided-actions button{min-height:56px;font-size:15px;font-weight:800}
+.view[data-view="project"] .guided-actions{grid-template-columns:1fr}
+@media(max-width:700px){.guided-progress{position:static}.guided-steps{gap:4px}.guided-step{min-height:52px;padding:6px 3px;display:grid;gap:3px}.guided-step span{margin:auto}.guided-step small{font-size:9px}.guided-actions{grid-template-columns:1fr}.guided-message{font-size:11px}}
+@media print{.guided-progress,.guided-actions{display:none!important}}

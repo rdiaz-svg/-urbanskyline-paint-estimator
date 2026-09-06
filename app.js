@@ -50,6 +50,62 @@ function bindPhoneFormatting(){const e=$('phone');if(!e)return;const apply=()=>{
 function duplicateRoom(i){const src=state.rooms[i];if(!src)return;const copy=JSON.parse(JSON.stringify(src));copy.name=src.name+' Copy';copy.selected=true;state.rooms.splice(i+1,0,copy);save();renderRooms();renderColors()}
 function estimateAudit(){const issues=[],warnings=[];if(!String(state.project.customerName||'').trim())issues.push('Customer name is missing.');if(!String(state.project.address||'').trim())issues.push('Project address is missing.');const digits=String(state.project.phone||'').replace(/\D/g,'');if(digits.length!==10)warnings.push('Customer phone should contain 10 digits.');const selected=state.rooms.filter(r=>r.selected);if(!selected.length && !(state.cabinets||[]).length)issues.push('No rooms or cabinet work selected.');selected.forEach(r=>{if(!(Number(r.length)>0&&Number(r.width)>0&&Number(r.height)>0))issues.push(r.name+': measurements are incomplete.');if(r.repairs&&Number(r.repairs.largeRepair||0)>0)warnings.push(r.name+': large drywall repair requires a field estimate.');});const c=calc();if(!(c.sale>0))issues.push('Estimate price is $0.');if(Number(state.pricing?.targetMargin||.4)<.4)warnings.push('Courtesy Project Credit is active because margin is below the 40% standard target.');const all=[...issues,...warnings];alert(all.length?('ESTIMATE AUDIT\n\n'+issues.map(x=>'❌ '+x).concat(warnings.map(x=>'⚠️ '+x)).join('\n')+'\n\n'+(issues.length?'Fix required items before customer approval.':'Ready to review with customer.')):'ESTIMATE AUDIT\n\n✓ Ready to review with customer.');return !issues.length}
 function toggleCustomerView(){document.body.classList.toggle('customer-view');const on=document.body.classList.contains('customer-view');const b=$('customerViewBtn');if(b)b.textContent=on?'Exit Customer View':'Customer View';if(on)nav(isApprovedProject()?'currentcontract':'proposal')}
+function guidedStepStatus(){
+  const projectIssues=[];
+  if(!String(state.project?.customerName||'').trim())projectIssues.push('Enter the customer name.');
+  if(!String(state.project?.address||'').trim())projectIssues.push('Select or enter the project address.');
+  const selected=(state.rooms||[]).filter(r=>r.selected);
+  const activeCabinets=(state.cabinets||[]).filter(c=>c.selected!==false&&cabinetCalc(c).hours>0);
+  const roomIssues=[];
+  if(!selected.length&&!activeCabinets.length)roomIssues.push('Select at least one room or cabinet scope.');
+  selected.forEach(r=>{if(!(Number(r.length)>0&&Number(r.width)>0&&Number(r.height)>0))roomIssues.push(`${r.name}: complete the measurements.`)});
+  const colorIssues=[];
+  if(selected.length){
+    selected.forEach(r=>{
+      if(include(r,'walls')&&!String(r.wallColor||'').trim())colorIssues.push(`${r.name}: wall color is missing.`);
+      if(include(r,'ceiling')&&!String(r.ceilingColor||'').trim())colorIssues.push(`${r.name}: ceiling color is missing.`);
+      if(include(r,'trim')&&!String(r.trimColor||'').trim())colorIssues.push(`${r.name}: trim color is missing.`);
+    });
+  }
+  const c=calc(),estimateIssues=[];
+  if(!(Number(c.sale)>0))estimateIssues.push('Estimate price must be greater than $0.');
+  return {
+    project:{complete:!projectIssues.length,issues:projectIssues},
+    rooms:{complete:!roomIssues.length,issues:roomIssues},
+    colors:{complete:!roomIssues.length&&!colorIssues.length,issues:[...roomIssues,...colorIssues]},
+    estimate:{complete:!projectIssues.length&&!roomIssues.length&&!colorIssues.length&&!estimateIssues.length,issues:[...projectIssues,...roomIssues,...colorIssues,...estimateIssues]},
+    proposal:{complete:!!state.workflow?.approvalSignature,issues:state.workflow?.approvalSignature?[]:['Proposal has not been signed yet.']}
+  };
+}
+const GUIDED_STEPS=[['project','Project'],['rooms','Rooms'],['colors','Colors'],['estimate','Estimate'],['proposal','Proposal']];
+function renderGuidedProgress(){
+  const strips=document.querySelectorAll('[data-guided-progress]'); if(!strips.length)return;
+  if(isApprovedProject()){strips.forEach(el=>el.hidden=true);return}
+  const st=guidedStepStatus();
+  const active=document.querySelector('.view.active')?.dataset.view||'home';
+  const firstIncomplete=GUIDED_STEPS.findIndex(([k])=>k!=='proposal'&&!st[k].complete);
+  strips.forEach(el=>{
+    el.hidden=false;
+    el.innerHTML=`<div class="guided-steps">${GUIDED_STEPS.map(([k,label],i)=>{
+      const done=st[k].complete, current=active===k, locked=firstIncomplete>=0&&i>firstIncomplete;
+      return `<button type="button" class="guided-step ${done?'complete':'attention'} ${current?'current':''} ${locked?'locked':''}" data-guided-step="${k}" aria-current="${current?'step':'false'}"><span>${done?'✓':i+1}</span><small>${label}</small></button>`
+    }).join('')}</div>${firstIncomplete>=0?`<div class="guided-message"><strong>Next required:</strong> ${htmlEsc(st[GUIDED_STEPS[firstIncomplete][0]].issues[0]||'Complete this step.')}</div>`:'<div class="guided-message ready"><strong>Estimate workflow complete.</strong> Review the proposal with the customer.</div>'}`;
+  });
+}
+function guidedCanOpen(target,showMessage=true){
+  if(isApprovedProject())return true;
+  const order=GUIDED_STEPS.map(x=>x[0]),ti=order.indexOf(target); if(ti<0)return true;
+  const st=guidedStepStatus();
+  for(let i=0;i<ti;i++){
+    const k=order[i]; if(k==='proposal')continue;
+    if(!st[k].complete){
+      if(showMessage)alert(`Complete ${GUIDED_STEPS[i][1]} first:\n\n• ${st[k].issues.join('\n• ')}`);
+      return false;
+    }
+  }
+  return true;
+}
+function guidedContinue(target){if(guidedCanOpen(target,true))nav(target)}
 
 function isApprovedProject(){return state.workflow?.mode==='project'&&!!state.workflow?.approvedSnapshot}
 function approvedChangeOrders(){return (state.workflow?.changeOrders||[]).filter(x=>x.status==='Approved')}
@@ -85,7 +141,7 @@ function nav(v){
     alert('This estimate is approved and locked. Any scope or price change must be created as a Change Order.');
     v='changeorders';
   }
-  document.querySelectorAll('.view').forEach(x=>x.classList.toggle('active',x.dataset.view===v));window.scrollTo(0,0);if(v==='proposal'){if(isApprovedProject()&&state.workflow.approvedSnapshot?.proposalHTML&&$('proposalContent'))$('proposalContent').innerHTML=state.workflow.approvedSnapshot.proposalHTML;else renderProposal()}if(v==='subcontractor')renderSubcontractor();if(v==='execution')renderExecution();if(v==='history')renderHistory();if(v==='savedestimates')renderSavedEstimates();if(v==='changeorders')renderChangeOrders();if(v==='currentcontract')renderCurrentContractSummary()}document.addEventListener('click',e=>{const b=e.target.closest('[data-go]');if(b)nav(b.dataset.go)});
+  document.querySelectorAll('.view').forEach(x=>x.classList.toggle('active',x.dataset.view===v));window.scrollTo(0,0);renderGuidedProgress();if(v==='proposal'){if(isApprovedProject()&&state.workflow.approvedSnapshot?.proposalHTML&&$('proposalContent'))$('proposalContent').innerHTML=state.workflow.approvedSnapshot.proposalHTML;else renderProposal()}if(v==='subcontractor')renderSubcontractor();if(v==='execution')renderExecution();if(v==='history')renderHistory();if(v==='savedestimates')renderSavedEstimates();if(v==='changeorders')renderChangeOrders();if(v==='currentcontract')renderCurrentContractSummary()}document.addEventListener('click',e=>{const next=e.target.closest('[data-guided-next]');if(next){guidedContinue(next.dataset.guidedNext);return}const step=e.target.closest('[data-guided-step]');if(step){const target=step.dataset.guidedStep;if(guidedCanOpen(target,true))nav(target);return}const b=e.target.closest('[data-go]');if(b){const target=b.dataset.go;if(GUIDED_STEPS.some(x=>x[0]===target)&&!guidedCanOpen(target,true))return;nav(target)}});
 
 const PHOTO_DB_NAME="uslPaintPhotoDB",PHOTO_STORE="photos",PHOTO_LIMIT=12;
 function photoDb(){return new Promise((resolve,reject)=>{const req=indexedDB.open(PHOTO_DB_NAME,1);req.onupgradeneeded=()=>{const db=req.result;if(!db.objectStoreNames.contains(PHOTO_STORE)){const st=db.createObjectStore(PHOTO_STORE,{keyPath:"id"});st.createIndex("projectId","projectId",{unique:false})}};req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)})}
@@ -297,7 +353,7 @@ function calc(){
   const courtesyCredit=selectedMargin<standardTargetMargin?Math.max(0,standardInvestment-sale):0;
   return{sale,direct,profit:sale-direct,margin:sale?(sale-direct)/sale:0,targetMargin:selectedMargin,standardTargetMargin,standardMarginFloor,standardInvestment,courtesyCredit,hours,productionHours,setupCleanupHours,painterDays,painterHourly,subcontractorPayout,days:hours?Math.ceil(painterDays):0,gallons,groups:Object.values(groups),primerGroups:Object.values(primerGroups),primerGallons,primerCost,roomBreakdown,selected:state.rooms.filter(r=>r.selected&&scopeSummary(r)!=='None').length+(state.cabinets||[]).filter(c=>c.selected!==false&&cabinetCalc(c).hours>0).length,marketSale,marginFloor,minimumJob:hasWork?PRICING.minimumJob:0,materialCost,paintCost,suppliesCost,suppliesTier,repairHours,repairMaterials,laborCost,cabinetHours,cabinetPaintCost,cabinetFinishGallons,cabinetPrimerGallons};
 }
-function refreshAll(){renderWorkflow();
+function refreshAll(){renderWorkflow();renderGuidedProgress();
   const c=calc(),p=state.project;
   const w=state.workflow||{}, isProject=w.mode==='project'&&w.approvedSnapshot, snap=isProject?w.approvedSnapshot:null, t=snap?.totals||{};
   $('homeProjectLabel').textContent=(isProject?(snap?.project?.customerName||snap?.project?.address):(p.customerName||p.address))||'No project started';
@@ -954,7 +1010,7 @@ bindProject();bindPhoneFormatting();bindPhotoInputs();bindMaterialSettings();bin
 
 // V6.8 — installed PWA update manager. Project/settings data remains in localStorage.
 (() => {
-  const CURRENT_VERSION = '8.2.1';
+  const CURRENT_VERSION = '8.3.0';
   const banner = () => document.getElementById('updateBanner');
   const compareVersions = (a,b) => {
     const aa=String(a).split('.').map(Number), bb=String(b).split('.').map(Number);
