@@ -1,3 +1,10 @@
+V7.3.1 — Cloud Restore Reliability Fix
+
+- Fixes CLOUD RESTORE FAILED: Unexpected end of JSON input.
+- Downloads cloud backup in verified chunks before parsing.
+- Preserves V7.2.5 iPad keyboard behavior and V7.3 cloud backup.
+- No pricing, cabinet, signature, contract, or change-order calculation changes.
+
 V6.9.6 — Automatic Change Order Pricing
 
 UrbanSkyLine Paint Estimator V6.9 — Estimate Mode / Project Mode Foundation
