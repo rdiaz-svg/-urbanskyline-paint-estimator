@@ -1,12 +1,15 @@
-UrbanSkyLine Paint Estimator V8.0.1 — iPad Keyboard Regression Fix
+UrbanSkyLine Paint Estimator V8.0.2 — iPad Keyboard Cache Refresh Fix
 
-Based on V8.0.0 Transactional Cloud Backup.
+This build preserves V8 Cloud Sync 2.0 and forces every app/version/cache reference to V8.0.2.
+
 Changes:
-- Restores iPad PWA viewport-fit handling
-- Adds iPad Visual Viewport stabilization on field focus
-- Explicit input modes for Project fields
-- Keeps 16px input sizing to prevent WebKit focus zoom
-- New V8.0.1 cache namespace and cache-busting assets
-- Cloud Sync 2.0 / API v5.0 logic unchanged
+- Visible header = V8.0.2
+- CURRENT_VERSION = 8.0.2
+- Backup appVersion = 8.0.2
+- styles.css?v=802
+- app.js?v=802
+- service worker registered as sw.js?v=802
+- cache namespace = urbanskyline-v8.0.2
+- version.json = 8.0.2
 
-Test on iPad: install/update, fully close the app once, reopen, then tap Customer Name, Phone, Email, Address, City/ZIP, Estimator, and Notes.
+Upload/replace all 8 files together so GitHub Pages cannot keep a mixed-version package.

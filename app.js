@@ -572,7 +572,7 @@ function signSubcontractorWorkOrder(){if(!isApprovedProject()){alert('Convert th
 $('signatureCanvas')?.addEventListener('pointerdown',startSignature);$('signatureCanvas')?.addEventListener('pointermove',moveSignature);$('signatureCanvas')?.addEventListener('pointerup',endSignature);$('signatureCanvas')?.addEventListener('pointercancel',endSignature);$('signatureClear')?.addEventListener('click',clearSignatureCanvas);$('signatureClose')?.addEventListener('click',closeSignatureModal);$('signatureAccept')?.addEventListener('click',acceptSignature);$('signatureModal')?.addEventListener('click',e=>{if(e.target===$('signatureModal'))closeSignatureModal();});window.addEventListener('resize',()=>{if(!$('signatureModal')?.hidden)resizeSignatureCanvas();});
 
 
-// V8.0.1 — iPad PWA keyboard regression stabilization.
+// V8.0.2 — forced cache/version refresh; preserves iPad input behavior.
 // Keep the installed app on the normal full-width editing viewport and avoid
 // focus-time viewport state carrying over from the compact keyboard layout.
 (() => {
@@ -829,7 +829,7 @@ window.uslCloudBackup=async function(){
     if(btn){btn.disabled=true;btn.textContent='Backing Up…'}
     if(state.workflow?.mode==='project'&&state.workflow?.approvedSnapshot)archiveCurrentProject();
     const photos=await exportCloudPhotos();
-    const payload={schemaVersion:2,appVersion:'8.0.0',savedAt:new Date().toISOString(),state:stateForArchive(state),history:loadHistory(),photos};
+    const payload={schemaVersion:2,appVersion:'8.0.2',savedAt:new Date().toISOString(),state:stateForArchive(state),history:loadHistory(),photos};
     const txt=JSON.stringify(payload),parts=splitBackupText(txt,9000),fullSha=await sha256Text(txt);
     const begin=await uslApi('backupV4Begin',{totalChars:txt.length,chunkCount:parts.length,sha256:fullSha,savedAt:payload.savedAt});
     const backupId=String(begin.backupId||'');if(!backupId)throw Error('Cloud backup transaction did not return an ID.');
@@ -898,7 +898,7 @@ bindProject();bindPhoneFormatting();bindPhotoInputs();bindMaterialSettings();bin
 
 // V6.8 — installed PWA update manager. Project/settings data remains in localStorage.
 (() => {
-  const CURRENT_VERSION = '8.0.1';
+  const CURRENT_VERSION = '8.0.2';
   const banner = () => document.getElementById('updateBanner');
   const compareVersions = (a,b) => {
     const aa=String(a).split('.').map(Number), bb=String(b).split('.').map(Number);
@@ -937,7 +937,7 @@ bindProject();bindPhoneFormatting();bindPhotoInputs();bindMaterialSettings();bin
   window.addEventListener('load', async () => {
     if('serviceWorker' in navigator){
       try{
-        const reg=await navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'});
+        const reg=await navigator.serviceWorker.register('./sw.js?v=802',{updateViaCache:'none'});
         reg.addEventListener('updatefound',()=>{ const w=reg.installing; if(w) w.addEventListener('statechange',()=>{ if(w.state==='installed' && navigator.serviceWorker.controller) checkForUrbanSkyLineUpdate(); }); });
       }catch(e){}
     }
