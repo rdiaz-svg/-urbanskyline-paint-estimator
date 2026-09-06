@@ -51,3 +51,12 @@ V7.0 TOUCH SIGNATURES
 - Signed original proposal and approved Change Orders remain locked in local Project History.
 - Customer signatures appear on customer contract records; subcontractor signature remains internal.
 - Existing legacy approved projects/change orders remain usable and are labeled as legacy when no signature was captured.
+
+
+V7.1 EMAIL & SHARE SIGNED DOCUMENTS
+- Adds native Share / Email actions for customer-facing proposal and current contract.
+- On iPhone/iPad, Share / Email uses the system share sheet and includes a self-contained signed HTML document that can be sent through Mail, Messages, AirDrop, Files, and compatible apps.
+- Adds a direct Email Customer button using the saved customer email, subject, and project summary.
+- Current Customer Contract now includes captured signatures for the original proposal and approved Change Orders.
+- Print / Save PDF remains available for a PDF copy.
+- Internal direct cost, margin, profit, material cost, and subcontractor payout are excluded from shared customer documents.
