@@ -767,10 +767,27 @@ function blobToDataUrl(blob){return new Promise((resolve,reject)=>{const fr=new 
 async function exportCloudPhotos(){const photos=await getProjectPhotos();const out=[];for(const p of photos){out.push({id:p.id,projectId:p.projectId,created:p.created,name:p.name||'Job photo',dataUrl:await blobToDataUrl(p.blob)})}return out}
 function dataUrlToBlob(dataUrl){const parts=String(dataUrl||'').split(','),meta=parts[0]||'',bin=atob(parts[1]||''),m=/data:([^;]+)/.exec(meta),u8=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u8[i]=bin.charCodeAt(i);return new Blob([u8],{type:m?m[1]:'image/jpeg'})}
 async function replaceProjectPhotosFromCloud(items){if(!Array.isArray(items))return;const db=await photoDb();await new Promise((resolve,reject)=>{const tx=db.transaction(PHOTO_STORE,'readwrite'),st=tx.objectStore(PHOTO_STORE),idx=st.index('projectId'),r=idx.openCursor(IDBKeyRange.only(state.project.photoProjectId));r.onsuccess=()=>{const c=r.result;if(c){c.delete();c.continue()}};tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)});for(const p of items){if(!p.dataUrl)continue;await addPhotoRecord({id:p.id||('ph_'+Date.now()+'_'+Math.random().toString(36).slice(2)),projectId:state.project.photoProjectId,created:p.created||Date.now(),name:p.name||'Cloud photo',blob:dataUrlToBlob(p.dataUrl)})}}
-window.uslCloudBackup=async function(){const msg=$("syncMessage"),btn=$("pushSheet");try{if(msg){msg.textContent='Preparing complete cloud backup…';msg.className='sync-status working'}if(btn){btn.disabled=true;btn.textContent='Backing Up…'}if(state.workflow?.mode==='project'&&state.workflow?.approvedSnapshot)archiveCurrentProject();const photos=await exportCloudPhotos();const payload={schemaVersion:1,appVersion:'7.3.5',savedAt:new Date().toISOString(),state:stateForArchive(state),history:loadHistory(),photos};const d=await uslApi('cloudBackup',{backup:payload});if(msg){msg.textContent=`Cloud backup complete${d.savedAt?' · '+new Date(d.savedAt).toLocaleString():''}. ${photos.length} photo${photos.length===1?'':'s'} included.`;msg.className='sync-status success'}}catch(e){if(msg){msg.textContent='CLOUD BACKUP FAILED: '+(e.message||e);msg.className='sync-status error'}}finally{if(btn){btn.disabled=false;btn.textContent='Back Up Cloud'}}};
+window.uslCloudBackup=async function(){
+  const msg=$("syncMessage"),btn=$("pushSheet");
+  try{
+    if(msg){msg.textContent='Preparing and verifying complete cloud backup…';msg.className='sync-status working'}
+    if(btn){btn.disabled=true;btn.textContent='Backing Up…'}
+    if(state.workflow?.mode==='project'&&state.workflow?.approvedSnapshot)archiveCurrentProject();
+    const photos=await exportCloudPhotos();
+    const payload={schemaVersion:2,appVersion:'7.4.0',savedAt:new Date().toISOString(),state:stateForArchive(state),history:loadHistory(),photos};
+    const d=await uslApi('cloudBackup',{backup:payload});
+    const chars=Number(d.totalChars),bytes=Number(d.byteCount);
+    if(d.verified!==true||!String(d.backupId||'')||!Number.isSafeInteger(chars)||chars<2||!Number.isSafeInteger(bytes)||bytes<2||!/^[a-f0-9]{64}$/i.test(String(d.sha256||''))){
+      throw Error('Google did not return a verified backup receipt. No success was recorded.');
+    }
+    if(msg){msg.textContent=`Verified cloud backup complete${d.savedAt?' · '+new Date(d.savedAt).toLocaleString():''}. ${photos.length} photo${photos.length===1?'':'s'} included · ${bytes.toLocaleString()} bytes verified.`;msg.className='sync-status success'}
+  }catch(e){
+    if(msg){msg.textContent='CLOUD BACKUP FAILED: '+(e.message||e);msg.className='sync-status error'}
+  }finally{if(btn){btn.disabled=false;btn.textContent='Back Up Cloud'}}
+};
 async function loadCloudBackupChunked(){
   const startInfo=await uslApi('cloudRestoreStart');
-  if(!startInfo||!startInfo.found)return null;
+  if(!startInfo||!startInfo.found)throw Error(startInfo?.message||'No verified cloud backup exists yet. Create a verified backup first.');
   const backupId=String(startInfo.backupId||'');
   const chunkSize=Number(startInfo.chunkSize);
   const expectedSha256=String(startInfo.sha256||'').toLowerCase();
@@ -838,7 +855,7 @@ bindProject();bindPhoneFormatting();bindPhotoInputs();bindMaterialSettings();bin
 
 // V6.8 — installed PWA update manager. Project/settings data remains in localStorage.
 (() => {
-  const CURRENT_VERSION = '7.3.5';
+  const CURRENT_VERSION = '7.4.0';
   const banner = () => document.getElementById('updateBanner');
   const compareVersions = (a,b) => {
     const aa=String(a).split('.').map(Number), bb=String(b).split('.').map(Number);

@@ -1,10 +1,10 @@
-UrbanSkyLine Paint Estimator V7.3.5 — Cursor-Based Cloud Restore
+UrbanSkyLine Paint Estimator V7.4.0 — Verified Transactional Cloud Backup
 
-Fixes:
-- Replaces index-based restore chunks with server-directed cursor/offset streaming.
-- EOF is a valid terminal response; no out-of-range chunk request can fail the restore.
-- Pins restore to one Google Drive backup file ID.
-- Verifies total length and SHA-256 before parsing/restoring.
-- Keeps V7.2.5 iPad keyboard behavior and V7.3 cloud backup behavior.
-
-Backend required: UrbanSkyLine Apps Script API v3.5.
+Cloud safety redesign:
+- Immutable versioned backup files in Google Drive
+- Server read-back verification before backup success is reported
+- SHA-256 integrity verification
+- Restore pins one verified Drive file by ID
+- Existing zero-byte legacy latest-backup.json is ignored
+- Previous verified backups are preserved instead of overwritten
+- V7.2.5 iPad keyboard fix preserved
