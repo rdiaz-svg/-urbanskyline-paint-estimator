@@ -1,10 +1,6 @@
-UrbanSkyLine Paint Estimator V7.4.0 — Verified Transactional Cloud Backup
+UrbanSkyLine Paint Estimator V8.0.0 — Cloud Sync 2.0 Rebuild
 
-Cloud safety redesign:
-- Immutable versioned backup files in Google Drive
-- Server read-back verification before backup success is reported
-- SHA-256 integrity verification
-- Restore pins one verified Drive file by ID
-- Existing zero-byte legacy latest-backup.json is ignored
-- Previous verified backups are preserved instead of overwritten
-- V7.2.5 iPad keyboard fix preserved
+Rebuilt from the stable V7.2.5 application base.
+Cloud backup/restore protocol is new: transactional chunk upload, per-chunk SHA-256, active-backup commit, byte-exact chunk restore, and full SHA-256 verification before local data is replaced.
+The backend can automatically migrate the existing legacy latest-backup.json once if no V8 verified backup exists.
+Keyboard configuration from V7.2.5 is preserved.
