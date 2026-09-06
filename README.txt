@@ -83,3 +83,10 @@ V7.2.5 iPad Keyboard Compatibility — corrected release metadata
 - Removed explicit inputmode and enterkeyhint overrides so iPadOS uses native keyboard selection from HTML input types.
 - Simplified viewport metadata to reduce standalone PWA keyboard/visual viewport interaction.
 - No estimator, pricing, cabinet, signature, contract, or change-order calculation changes.
+
+
+V7.3.0 CLOUD PROJECT SYNC & BACKUP
+- Complete cloud backup/restore for full app state, approved snapshots, signatures, change orders, cabinets, subcontractor data, project history, and current project photos.
+- Uses Apps Script API v3 and a private Google Drive folder owned by the script owner.
+- Existing Google Sheet legacy sync endpoints remain supported for compatibility.
+- V7.2.5 iPad keyboard compatibility is preserved unchanged.
