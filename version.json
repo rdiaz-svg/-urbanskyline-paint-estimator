@@ -1,6 +1,6 @@
 {
-  "version": "8.2.0",
-  "build": 820,
+  "version": "8.2.1",
+  "build": 821,
   "released": "2026-09-06",
-  "notes": "Saved Estimates & Project Retrieval"
+  "notes": "Human-readable Estimate Number"
 }

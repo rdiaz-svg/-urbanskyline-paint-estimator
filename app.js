@@ -773,9 +773,14 @@ function ensureEstimateIdentity(){
   if(!state.workflow.createdAt)state.workflow.createdAt=new Date().toISOString();
   return state.workflow.estimateId;
 }
+function estimateDisplayId(address,dateValue){
+  const street=String(address||'').trim().replace(/\s+/g,' ');
+  const d=new Date(dateValue||Date.now()),valid=!Number.isNaN(d.getTime()),mm=String((valid?d:new Date()).getMonth()+1).padStart(2,'0'),dd=String((valid?d:new Date()).getDate()).padStart(2,'0'),yyyy=(valid?d:new Date()).getFullYear();
+  return `${street||'Address Pending'} — ${mm}/${dd}/${yyyy}`;
+}
 function savedEstimateMeta(){
   ensureEstimateIdentity();const c=calc(),w=state.workflow||{},p=state.project||{};
-  return{estimateId:w.estimateId,customerName:p.customerName||'Unnamed Estimate',address:p.address||'',cityZip:p.cityZip||'',status:w.mode==='project'?'Approved':(w.estimateStatus||'Draft'),amount:w.mode==='project'&&w.approvedSnapshot?Number(w.approvedSnapshot?.totals?.sale||0):Number(c.sale||0),createdAt:w.createdAt||new Date().toISOString()};
+  return{estimateId:w.estimateId,displayEstimateId:estimateDisplayId(p.address,w.createdAt),customerName:p.customerName||'Unnamed Estimate',address:p.address||'',cityZip:p.cityZip||'',status:w.mode==='project'?'Approved':(w.estimateStatus||'Draft'),amount:w.mode==='project'&&w.approvedSnapshot?Number(w.approvedSnapshot?.totals?.sale||0):Number(c.sale||0),createdAt:w.createdAt||new Date().toISOString()};
 }
 function setSavedEstimateStatus(text,kind='working'){
   ['saveDraftCloudStatus','quickSaveDraftStatus','savedEstimateStatus'].forEach(id=>{const e=$(id);if(e){e.textContent=text;e.className='sync-status '+kind}})
@@ -786,7 +791,7 @@ async function saveCurrentEstimateToCloud(){
     setSavedEstimateStatus('Preparing saved estimate…','working');
     localStorage.setItem('uslPaintApp',JSON.stringify(state));
     const photos=await exportCloudPhotos();
-    const payload={schemaVersion:SAVED_ESTIMATE_SCHEMA,appVersion:'8.2.0',savedAt:new Date().toISOString(),estimateId:id,meta,state:stateForArchive(state),photos};
+    const payload={schemaVersion:SAVED_ESTIMATE_SCHEMA,appVersion:'8.2.1',savedAt:new Date().toISOString(),estimateId:id,meta,state:stateForArchive(state),photos};
     const txt=JSON.stringify(payload),bytes=new TextEncoder().encode(txt),fullSha=await sha256Bytes(bytes),chunkBytes=24000,totalChunks=Math.ceil(bytes.length/chunkBytes);
     const begin=await uslApi('savedEstimateBegin',{estimateId:id,totalBytes:bytes.length,totalChunks,sha256:fullSha,appVersion:payload.appVersion,meta});
     const transactionId=String(begin.transactionId||''),serverChunk=Number(begin.chunkBytes||chunkBytes);if(!transactionId)throw Error('Saved estimate transaction did not return an ID.');
@@ -809,9 +814,9 @@ async function loadSavedEstimateList(){
 }
 function drawSavedEstimateList(){
   const el=$('savedEstimateList');if(!el)return;const q=String($('savedEstimateSearch')?.value||'').trim().toLowerCase();
-  const items=savedEstimateCache.filter(x=>!q||[x.customerName,x.address,x.cityZip,x.estimateId,x.status].some(v=>String(v||'').toLowerCase().includes(q)));
+  const items=savedEstimateCache.filter(x=>{const displayId=estimateDisplayId(x.address,x.createdAt||x.savedAt);return !q||[x.customerName,x.address,x.cityZip,x.estimateId,displayId,x.status].some(v=>String(v||'').toLowerCase().includes(q))});
   if(!items.length){el.innerHTML='<p class="muted">No matching saved estimates.</p>';return}
-  el.innerHTML=items.map(x=>`<div class="saved-estimate-item"><div class="saved-estimate-main"><div><strong>${htmlEsc(x.customerName||'Unnamed Estimate')}</strong><small>${htmlEsc(x.address||'No address')}${x.cityZip?' · '+htmlEsc(x.cityZip):''}</small><span class="saved-estimate-badge">${htmlEsc(x.status||'Draft')}</span><small>Estimate ${htmlEsc(x.estimateId||'')} · saved ${new Date(x.savedAt).toLocaleString()}</small></div><div class="saved-estimate-amount"><strong>${money(Number(x.amount||0))}</strong></div></div><div class="saved-estimate-actions"><button class="primary" type="button" data-saved-open="${htmlEsc(x.estimateId)}">Open</button><button class="secondary" type="button" data-saved-duplicate="${htmlEsc(x.estimateId)}">Duplicate</button><button class="danger" type="button" data-saved-delete="${htmlEsc(x.estimateId)}">Delete</button></div></div>`).join('');
+  el.innerHTML=items.map(x=>{const displayId=estimateDisplayId(x.address,x.createdAt||x.savedAt);return `<div class="saved-estimate-item"><div class="saved-estimate-main"><div><strong>${htmlEsc(x.customerName||'Unnamed Estimate')}</strong><small>${htmlEsc(x.address||'No address')}${x.cityZip?' · '+htmlEsc(x.cityZip):''}</small><span class="saved-estimate-badge">${htmlEsc(x.status||'Draft')}</span><small><strong>Estimate # ${htmlEsc(displayId)}</strong> · saved ${new Date(x.savedAt).toLocaleString()}</small></div><div class="saved-estimate-amount"><strong>${money(Number(x.amount||0))}</strong></div></div><div class="saved-estimate-actions"><button class="primary" type="button" data-saved-open="${htmlEsc(x.estimateId)}">Open</button><button class="secondary" type="button" data-saved-duplicate="${htmlEsc(x.estimateId)}">Duplicate</button><button class="danger" type="button" data-saved-delete="${htmlEsc(x.estimateId)}">Delete</button></div></div>`}).join('');
   el.querySelectorAll('[data-saved-open]').forEach(b=>b.onclick=()=>openSavedEstimate(b.dataset.savedOpen,false));
   el.querySelectorAll('[data-saved-duplicate]').forEach(b=>b.onclick=()=>openSavedEstimate(b.dataset.savedDuplicate,true));
   el.querySelectorAll('[data-saved-delete]').forEach(b=>b.onclick=()=>deleteSavedEstimate(b.dataset.savedDelete));
@@ -872,7 +877,7 @@ window.uslCloudBackup=async function(){
     if(btn){btn.disabled=true;btn.textContent='Backing Up…'}
     if(state.workflow?.mode==='project'&&state.workflow?.approvedSnapshot)archiveCurrentProject();
     const photos=await exportCloudPhotos();
-    const payload={schemaVersion:2,appVersion:'8.2.0',savedAt:new Date().toISOString(),state:stateForArchive(state),history:loadHistory(),photos};
+    const payload={schemaVersion:2,appVersion:'8.2.1',savedAt:new Date().toISOString(),state:stateForArchive(state),history:loadHistory(),photos};
     const txt=JSON.stringify(payload),bytes=new TextEncoder().encode(txt),fullSha=await sha256Bytes(bytes);
     const requestedChunkBytes=24000,totalChunks=Math.ceil(bytes.length/requestedChunkBytes);
     const begin=await uslApi('cloudBackupBegin',{totalBytes:bytes.length,totalChunks,sha256:fullSha,appVersion:payload.appVersion});
@@ -949,7 +954,7 @@ bindProject();bindPhoneFormatting();bindPhotoInputs();bindMaterialSettings();bin
 
 // V6.8 — installed PWA update manager. Project/settings data remains in localStorage.
 (() => {
-  const CURRENT_VERSION = '8.2.0';
+  const CURRENT_VERSION = '8.2.1';
   const banner = () => document.getElementById('updateBanner');
   const compareVersions = (a,b) => {
     const aa=String(a).split('.').map(Number), bb=String(b).split('.').map(Number);
